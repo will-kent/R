@@ -11,4 +11,7 @@ test <- read.csv(".\\Data\\test.csv")
 ##################
 # Data Decisions #
 ##################
-
+# Break up the passenger name into Title, Last Name and "Other Names" 
+train <- train %>% 
+  separate(Name,c("LastName","Remaining"), sep = ", ", extra = "merge") %>% 
+  separate(Remaining, c("Title", "OtherNames"), sep = ". ", extra = "merge")

@@ -2,15 +2,15 @@
 title: "Titanic Survival"
 output: html_notebook
 ---
-
-Get Libraries
+## Data Exploration
 ```{r}
 library(tidyverse)
 library(RColorBrewer)
 
 ```
 
-Read file and show basic information
+**Data Basics**  
+How does the data look in the original file.
 ```{r}
 train <- read.csv("./Data/train.csv")
 
@@ -21,20 +21,23 @@ train$Survived <- as.factor(train$Survived)
 train$Pclass <- as.factor(train$Pclass)
 ```
 
-Passenger Id is always unique with no duplicates
+**Passenger Id**  
+The Passenger Id field only contains unique values as no duplicates were found.
 ```{r}
 train %>% 
   group_by(PassengerId) %>% 
   summarise(total = n()) %>% 
   filter(total > 1)
 ```
-Most passengers travelled in 3rd class
+**Passengers by Class**  
+As expected most passengers on the Titanic travelled third class.
 ```{r}
 train %>% 
   ggplot() +
   geom_bar(mapping = aes(x = Pclass))
 ```
-Survival by Class
+**Survival by Class**  
+As a proportion of passengers travelling, those in first class were more likely to survive than those travelling in third class.
 ```{r}
 train %>% 
   group_by(Pclass, Survived) %>% 
@@ -44,13 +47,14 @@ train %>%
   scale_fill_brewer(palette = "Set1")
 ```
 
-Most passengers were men
+**Gender of Passengers**  
+More men travelled on the Titanic than women.
 ```{r}
 train %>% 
   ggplot() +
   geom_bar(mapping = aes(x = Sex))
 ```
-**Gender and Survival**
+**Gender and Survival**  
 Chivalry played its part as men were disproportinately more likely to die. Even though more men travelled on the Titanic on it's fateful voyage less men than women, in total, survived.
 ```{r}
 train %>%
@@ -60,7 +64,8 @@ train %>%
   geom_bar(mapping = aes(x = Sex, y = total_values, fill = Survived), stat = "identity") +
   scale_fill_brewer(palette = "Set1")
 ```
-Gender and class
+**Gender and class**  
+Men were less likely to survive the sinking of the Titanic but were they more likely to travel in lower classes?
 ```{r}
 train %>%
   group_by(Sex, Pclass) %>% 
@@ -69,5 +74,53 @@ train %>%
   geom_bar(mapping = aes(x = Sex, y = total_values, fill = Pclass), stat = "identity") +
   scale_fill_brewer(palette = "Set1")
 ```
+**Age of Passengers**  
+There are 177 passengers for whom their Age is not recorded.
+```{r}
+train %>% 
+  filter(is.na(Age))
+```
 
+```{r}
+train %>% 
+  ggplot() +
+  geom_histogram(mapping = aes(x = Age), bins = 20, stat = "bin")
+```
+Some passengers have an age less than 1 but these seem to be legitimate values. The data reveals what appear to be 9 month old twins, who both survived.
+```{r}
+train %>% 
+  filter(Age < 1) %>% 
+  select(Name, Age, Survived)
+```
+
+**Port of Embarkation**  
+Port of embarkation shows most passengers boarded the boat at Southampton. Those that boarded in Cherbourg appear to show a higher survival rate than passengers boarding at either Southampton or Queenstown.  
+There also appears to be a small number of passengers whose embarkation point is not known.
+```{r}
+train %>% 
+  group_by(Embarked, Survived) %>% 
+  summarise(total_values = n()) %>% 
+  ggplot() +
+  geom_bar(mapping = aes(x = Embarked, y = total_values, fill = Survived), stat = "identity") +
+  scale_fill_brewer(palette = "Set1")
+```
+**Passenger Names**  
+No names are duplicated in the original dataset.
+```{r}
+train %>% 
+  group_by(Name) %>% 
+  summarise(total_values = n()) %>%
+  filter(total_values > 1)
+```
+The title used by passengers can be broken out of the Name field.
+```{r}
+train %>% 
+  separate(Name,c("LastName","Remaining"), sep = ", ", extra = "merge") %>% 
+  separate(Remaining, c("Title", "OtherNames"), sep = ". ", extra = "merge") %>% 
+  group_by(Title) %>% 
+  summarise(total_values = n()) %>% 
+  ggplot() +
+  geom_bar(mapping = aes(x = Title, y = total_values), stat = "identity")
+
+```
 
