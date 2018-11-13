@@ -1,0 +1,73 @@
+---
+title: "Titanic Survival"
+output: html_notebook
+---
+
+Get Libraries
+```{r}
+library(tidyverse)
+library(RColorBrewer)
+
+```
+
+Read file and show basic information
+```{r}
+train <- read.csv("./Data/train.csv")
+
+summary(train)
+str(train)
+
+train$Survived <- as.factor(train$Survived)
+train$Pclass <- as.factor(train$Pclass)
+```
+
+Passenger Id is always unique with no duplicates
+```{r}
+train %>% 
+  group_by(PassengerId) %>% 
+  summarise(total = n()) %>% 
+  filter(total > 1)
+```
+Most passengers travelled in 3rd class
+```{r}
+train %>% 
+  ggplot() +
+  geom_bar(mapping = aes(x = Pclass))
+```
+Survival by Class
+```{r}
+train %>% 
+  group_by(Pclass, Survived) %>% 
+  summarise(total_values = n()) %>%  
+  ggplot() +
+  geom_bar(mapping = aes(x = Pclass, y = total_values, fill = Survived), stat = "identity") +
+  scale_fill_brewer(palette = "Set1")
+```
+
+Most passengers were men
+```{r}
+train %>% 
+  ggplot() +
+  geom_bar(mapping = aes(x = Sex))
+```
+**Gender and Survival**
+Chivalry played its part as men were disproportinately more likely to die. Even though more men travelled on the Titanic on it's fateful voyage less men than women, in total, survived.
+```{r}
+train %>%
+  group_by(Sex, Survived) %>% 
+  summarise(total_values = n()) %>% 
+  ggplot() +
+  geom_bar(mapping = aes(x = Sex, y = total_values, fill = Survived), stat = "identity") +
+  scale_fill_brewer(palette = "Set1")
+```
+Gender and class
+```{r}
+train %>%
+  group_by(Sex, Pclass) %>% 
+  summarise(total_values = n()) %>% 
+  ggplot() +
+  geom_bar(mapping = aes(x = Sex, y = total_values, fill = Pclass), stat = "identity") +
+  scale_fill_brewer(palette = "Set1")
+```
+
+
