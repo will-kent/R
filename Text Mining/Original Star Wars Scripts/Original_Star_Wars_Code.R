@@ -7,7 +7,7 @@ getwd()
 #setwd("C:\\Users\\will.kent\\source\\repos\\R\\Text Mining\\Original Star Wars Scripts")
 
 # Create manual stop words list
-myStopwords <- c("can","got","like","oh","get","hey","just","come")
+myStopwords <- c("can","got","like","oh","get","hey","just","come","need","want")
 
 # Create function to clean Corpus text 
 formatCorpus <- function(corpus){
@@ -203,31 +203,31 @@ ncloud <- df_ngram %>%
 ncloud
 
 ############
-## TD_IDF ##
+## TF_IDF ##
 ############
-# TD-IDF is a weighting method - terms that occur less often and more likely to be describe a document
+# TF-IDF is a weighting method - terms that occur less often and more likely to be describe a document
 # Create new dtm
-td_dtm <- DocumentTermMatrix(words, control = list(weighting = weightTfIdf))
+tf_dtm <- DocumentTermMatrix(words, control = list(weighting = weightTfIdf))
 
 # Add terms and sum weightings to matrix
-td_tot <- colSums(as.matrix(td_dtm))
+tf_tot <- colSums(as.matrix(tf_dtm))
 
 # Length gives the total number of terms - 2804
-length(td_tot)
+length(tf_tot)
 
 # Order the matrix with summed weightings
-td_ord <- order(td_tot, decreasing = TRUE)
+tf_ord <- order(tf_tot, decreasing = TRUE)
 
 # Inspect the most frequent terms
-td_tot[head(td_ord)]
+tf_tot[head(tf_ord)]
 
 # Create a data frame with terms and the summed weights
-df_tdidf = data.frame(term = names(td_tot), weights = td_tot)
+df_tfidf = data.frame(term = names(tf_tot), weights = tf_tot)
 
 # Create a wordcloud of important words based on weighting - seems elephants are important
-tplot <- df_tdidf %>% 
+tplot <- df_tfidf %>% 
   arrange(desc(weights)) %>% 
-  mutate(angle = 90*(runif(nrow(df_tdidf))>.6)) %>% 
+  mutate(angle = 90*(runif(nrow(df_tfidf))>.6)) %>% 
   slice(1:50) %>% 
   ggplot(aes(label = term, size = weights, colour = weights, angle = angle)) +
   geom_text_wordcloud_area() +
