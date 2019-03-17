@@ -1,0 +1,121 @@
+---
+title: "Mutating Joins with Dplyr"
+author: "William Kent"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+## Introduction
+
+Often in data analysis we are reliant on a relational database management system (RDBMS), or retrieving data from multiple sources, to answer the questions we have. In these cases datasets need to be combined. Base R provides this functionality through the *merge* function but with the release of the *dplyr* package joins have been made easier and faster.
+
+The *dplyr* package provides improvements to the *merge* function through:
+
+* Being less ambiguous - where *merge* is a single function *dplyr* provides "verbs" for each join type,
+* Standard terminology - in line with widely used standards,
+* Faster - *dplyr* performs better than the *merge* function.
+
+This blog will introduce you to the mutating join functions within *dplyr* and show you how to apply them.
+
+### Data: Band Members
+
+To understand the mutating join functions within *dplyr* we'll use the band members datasets contained within the *dplyr* package. These datasets are documented in ```?band_members```. The dataset contains three tables:
+
+1. Band members
+```{r band_members}
+head(band_members)
+```
+2. Band Instruments
+```{r band_instruments}
+head(band_instruments)
+```
+3. Band Instruments 2
+```{r band_instruments2}
+head(band_instruments2)
+```
+
+## Joins Types
+There are four types of mutating joins:
+
+1. Inner Join
+2. Left Outer Join
+3. Right Outer Join
+4. Full Outer Join
+
+The syntax for each mutating join utilising *dplyr* is:
+
+```{r eval = FALSE}
+inner_join(x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
+
+left_join(x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
+
+right_join(x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
+
+full_join(x, y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
+```
+
+The output of these functions is the same type as **_x_**.
+
+### Inner Joins
+An inner join combines two datasets and returns observations with matching join values. It is important to note observations from either dataset that do not match a observation from the other dataset are dropped from the combined dataset.
+
+The example below joins the band_members dataset to the band_instruments dataset and returns all matching values. Note that the observation with a name equal to "Mick" doesn't appear in the combined dataset even though it exists in the band_members dataset; the observation with the name equal to "Keith" in the band_instruments dataset is also dropped as it has no corresponding observation in the band_members dataset.
+
+```{r inner_join}
+inner_join(band_members, band_instruments, by = "name")
+```
+
+The above example could also be written ```inner_join(band_members, band_instruments)``` as the key *name* variable is common to both datasets and the default value for *by* is <span style = "color:purple">NULL</span> meaning that R will join on all variables with matching column names.
+
+### Outer Joins
+Where an inner join keeps observations that appear in both datasets an outer join keeps observations that appear in at least one of the datasets. Which observations are kept and which are excluded is controlled by the choice of outer join. NA is returned when a mathcing observation doesn't appear in the returned dataset. 
+
+#### Left Join
+A left join keeps all observations in the **_x_**, or *left*, dataset and drops non-matching observations in the **_y_**, or *right*, dataset.
+
+The below example joins the same two datasets as the inner join example but with the left_join verb. The observation in the band_members dataset with a name of "Mick" appears in the combined dataset; the observation in the band_instruments dataset with the name "Keith" doesn't.
+
+```{r left_join}
+left_join(band_members, band_instruments, by = "name")
+```
+
+#### Right Join
+A right join works in a similar way to the left join. The difference is it keeps all observations in the **_y_**, or *right*, dataset and drops non-matching observations in the **_x_**, or *left*, dataset.
+
+The example below continues with the same two datasets as the inner join example but with the right_join verb. The observation in the band_members dataset with a name of "Mick" doesn't appear in the combined dataset; the observation in the band_instruments dataset with the name "Keith" does.
+
+```{r right_join}
+right_join(band_members, band_instruments, by = "name")
+```
+
+#### Full Join
+A full join keeps all obeservations in **_x_** and **_y_** regardless of whether a corresponding match in the other dataset is found.
+
+In the example below the record with "Mick" in the band_members dataset and the record with "Keith" from the band_instruments dataset are returned.
+
+```{r full_join}
+full_join(band_members, band_instruments, by = "name")
+```
+
+### Additional Information
+#### Join on Variables with Different Names
+When join variables have different names the command is written:
+
+```{r diff_join_names}
+full_join(band_members, band_instruments2, by = c("name" = "artist"))
+```
+
+#### Piping
+As *dplyr* is part of the tidyverse mutating joins can be used with piping.
+```{r piping}
+band_members %>% full_join(band_instruments)
+```
+
+## References
+Wickham, H & Grolemund, G 2017 *R for Data Science* O'Reilly Media Inc, Sebastopol
+
+Wickham, H, Francois, R, Henry, L & Muller, K *Join two tables together*, viewed 17 March 2019, <https://dplyr.tidyverse.org/reference/join.html>
