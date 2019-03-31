@@ -1,0 +1,81 @@
+---
+title: "How far is Uluru to the coast"
+author: "Will Kent"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## How far is Uluru from the coast?
+
+Uluru is an iconic Australian landmark. It is a site of importance to ... include infor about importance to Aboriginals. Also include statistics about size etc. 
+
+But what is the minimum distance to the coast from Uluru? And where is that point?
+
+For this exercise we'll need to load the following libraries. 
+
+```{r library}
+library(tmaptools)
+library("rgeos")
+#library(maptools)
+library(sf)
+library(rgdal)
+library(raster)
+library(ggplot2)
+```
+
+## Geospatial Data
+Geospatial data has a nomenclature all of its own and can be quite confusing for the unintiated. The most basic geospatial objects are:
+* Points - a physical location on the earth expressed in latitude and longitude.
+* Polygons - a collection of points that enclose an area
+* Multipolygons - a collection of polygons
+
+### Projections
+The world isn't flat and this causes problems for the calculation of distance between two points. Two points separarted by a degree of longitude are further apart at the equartor than at the poles. 
+
+In this case we'll use the fairly standard WGS84 (World Grid System) for this inital projection of the locations and then transform these into <insert projection>. Which projection to use is down to the location on earth where the points are. For further information see <http://spatialreference.org/>. The projections we're using are stored in the variables _espg.3577_ and _wgs.84_.
+```{r projections}
+epsg.3577 <- "+proj=aea +lat_1=-18 +lat_2=-36 +lat_0=0 +lon_0=132 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+wgs.84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+```
+
+## Location of Uluru
+The first step is to find the latitude and logitude of Uluru within the WGS84 projection. There are a number of packages that provide the ability to obtain the latitude and longitude of an address or significant place but in this example I'll use the geocode_OSM function in the `tmaptools` package. This function use the Open Street Maps Api to retrive the location of a place.
+```{r uluru_geocode}
+loc <- geocode_OSM("Uluru", projection = wgs.84)
+longitude <- loc$coords["x"]
+latitude <- loc$coords["y"]
+```
+
+The final step for the latitude and longitude that we've obtained is to convert the point to well known text (WKT). Well known text is a binary represenation ofa geospatial object and is needed for <insert reason>. The paste operation concatenates our latitude and longitude together in a string prefixed with _**POINT**_. The ensures the readWKT function from the `rgeos` is able to understand it is dealing with a point rather than another geospatial object.
+```{r uluru_wkt}
+loc_txt <- paste("POINT(",longitude," ",latitude,")")
+loc_wkt <- readWKT(loc_txt, p4s = CRS(wgs.84))
+```
+
+## Coast line data
+To help with the calculation of how far Uluru is from the coast fortunately there is a shape file of the coastlines of the world on the <http://www.naturalearthdata.com> website. In this step the shape file is downloaded locally and unzipped. The shape file is loaded into memory using the readOGR function in the `<packageName>` package.
+```{r}
+download.file("http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/physical/ne_10m_coastline.zip", 
+              destfile = 'coastlines.zip')
+
+unzip(zipfile = "coastlines.zip", 
+      exdir = 'ne-coastlines-10m')
+
+coast <- readOGR("ne-coastlines-10m/ne_10m_coastline.shp")
+```
+
+## Distance calculations
+Now that we have both the point location of Uluru and the coast lines of the world loaded we can calculate the minimum distance from Uluru to the coast. This operation can be performed through the gDistance function in the `packagename` package. The gDistance function finds the distance between two points, or in the case of a point and multiploygon, the minimum distance between the point and the polygon. 
+```{r wgs84_distance}
+min_degrees <- gDistance(loc_wkt,coast)
+min_degrees
+```
+
+The result may not be as expected and although it provides and answer it might not be the expected answer. The value returned is in degrees. The disatnce between two geospatial objects in the WGS84 projection will always return a value in degrees. If we want an answer in kilometres the geospatial objects that we have need to be transformed into another projection and for this we'll use the epsg 3577 projection described above. We perform this transform using the spTransform function in the `packagename` package.
+```{r transform}
+coast_3577 <- spTransform(coast,CRS(epsg.3577))
+loc_3577 <- spTransform(loc_wkt, CRS(epsg.3577))
+```
