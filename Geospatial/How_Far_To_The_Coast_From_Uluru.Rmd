@@ -9,27 +9,26 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## How far is Uluru from the coast?
-Uluru (also names Ayers Rock) is a large sandstone monolith located in central Australia and is thought to have formed approximately 550 million years ago. It stands 348 metres above the surrounding plain and is listed as a UNESCO World Heritage Site.
+Uluru, Ayers Rock or simply "the Rock" is a large sandstone monolith located in central Australia. It is thought to have formed approximately 550 million years ago. It stands 348 metres above the surrounding plain and is listed as a UNESCO World Heritage Site.
 
-It is a site of imporance to the local *Pitjantjatjara* and *Yankunyjatjara* Aboriginal people. Uluru, and the surrounding area, is of great spiritual and cultural significance. 
+Uluru is a site of imporance to the local *Pitjantjatjara* and *Yankunyjatjara* Aboriginal people. Uluru, and the surrounding area, is of great spiritual and cultural significance. 
 
-But what is the minimum distance to the coast from Uluru? And where is that point?
+This post will use R to answer the questions what is the minimum distance to the coast from Uluru? And where is that point?
 
-For this exercise we'll need to load the following libraries. 
+To start the following libraries will need to be loaded. 
 
 ```{r library, message = FALSE, warning = FALSE}
 library(tmaptools)
 library(rgeos)
 library(geosphere)
-#library(maptools)
-#library(sf)
 library(rgdal)
-#library(raster)
-#library(ggplot2)
 ```
 
 ## Geospatial Data
-Geospatial data is data that pertains to an object on the surface of the Earth. The most basic of these geospatial objects are:
+Data relating to the surface of the earth, or geospatial data, can be a little confusing for the uninitiated so we'll start with some basics.
+
+### Geospatial Objects
+The basic geospatial objects are:
 
 * Point - a physical location on the earth expressed by two coordinates (e.g.latitude and longitude),
 * Linestring - a sequence of 2 or more connected points,
@@ -37,17 +36,19 @@ Geospatial data is data that pertains to an object on the surface of the Earth. 
 * Multipolygons - a collection of polygons.
 
 ### World Geodetic System
-In the 1950's the United States Department of Defence, together with scientists from around the world, commenced efforts to establish a system to which geodetic data (measurements of the earth) could be referred. This collaboration established a common latitude, longitude and elevation co-ordinate system and lead to the World Geodetic System 1960 (WGS60).
+In the 1950's the United States Department of Defence, together with scientists from around the world, commenced efforts to establish a system to which geodetic data (measurements of the earth) could be referred. This collaboration established a common latitude, longitude and elevation co-ordinate system which led to the World Geodetic System 1960 (WGS60) standard.
 
-Since 1960 the WGS has been updated a number of times to account for new information and data that effects measurements of the earths surface. The last such updated was in 1984 and formed the WGS84 used today as the standard reference system for modern technology based on the Gloabl Positioning Service (GPS).
+Since 1960 the WGS has been updated a number of times to account for new information and data that effects measurements of the earths surface. The last such updated was in 1984 and formed the WGS84 used today as the standard reference system for modern technology based on the Gloabl Positioning Service (GPS). 
+
+The use of WGS84 to place objects on the earths surface is a common practice but there are other methods available. In this instance WGS84 will be used as the co-ordinate reference system (CRS) and is set below for future use.
 ```{r projections}
-wgs.84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 ```
 
-## Location of Uluru
-The first step is to find the latitude and logitude of Uluru using the WGS84 standard. There are a number of packages that provide the ability to obtain the latitude and longitude of an address or significant place but in this example I'll use the geocode_OSM function in the `tmaptools` package. This function use the Open Street Maps Api to retrive the location of a place.
+## Locating Uluru
+The first step in this process is to identify the latitude and logitude of Uluru using the WGS84 standard. There are a number of packages and services that provide the ability to obtain the latitude and longitude of an address or significant place but in this example the geocode_OSM function in the `tmaptools` package will be used. This function uses the Open Street Maps API to retrive the location of a place.
 ```{r uluru_geocode, message = FALSE, warning = FALSE}
-loc <- geocode_OSM("Uluru", projection = wgs.84)
+loc <- geocode_OSM("Uluru", projection = wgs84)
 longitude <- loc$coords["x"]
 latitude <- loc$coords["y"]
 ```
@@ -55,7 +56,7 @@ latitude <- loc$coords["y"]
 The final step for the latitude and longitude that we've obtained is to convert the point to well known text (WKT). Well known text is a binary represenation ofa geospatial object and is needed for <insert reason>. The paste operation concatenates our latitude and longitude together in a string prefixed with _**POINT**_. The ensures the readWKT function from the `rgeos` is able to understand it is dealing with a point rather than another geospatial object.
 ```{r uluru_wkt, message = FALSE, warning = FALSE}
 loc_txt <- paste("POINT(",longitude," ",latitude,")")
-loc_wkt <- readWKT(loc_txt, p4s = CRS(wgs.84))
+loc_wkt <- readWKT(loc_txt, p4s = CRS(wgs84))
 ```
 
 ## Coast line data
@@ -82,7 +83,7 @@ closest_latitude <- dist_line[3]
 ```{r plot}
 th     <- seq(0,2*pi,len=1000)
 circle <- cbind(1.00001*min_degrees*cos(th)+loc_wkt$x,1.00001*min_degrees*sin(th)+loc_wkt$y)
-sp_circle <- SpatialLines(list(Lines(list(Line(circle)),ID="1")),proj4string=CRS(wgs.84))
+sp_circle <- SpatialLines(list(Lines(list(Line(circle)),ID="1")),proj4string=CRS(wgs84))
 
 # Plot on map
 plot(coast, asp=1)
