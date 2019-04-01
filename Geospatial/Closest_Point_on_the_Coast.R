@@ -5,6 +5,7 @@ library(rgeos) # for readWKT
 library(rgdal) # for CRS
 #library(raster)
 library(ggplot2)
+library(geosphere)
 
 # Set up projections - IMPORTANT - confirm the regions for projections are correct 3577 covers all of Australia
 epsg.3577 <- "+proj=aea +lat_1=-18 +lat_2=-36 +lat_0=0 +lon_0=132 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=km +no_defs"
@@ -27,10 +28,6 @@ unzip(zipfile = "coastlines.zip",
 
 coast <- readOGR("ne-coastlines-10m/ne_10m_coastline.shp")
 
-# Check Coordinate Reference System used - WGS84
-crs(coast)
-crs(loc_wkt)
-
 # Turn Shape file to data.frame
 coast_df <- SpatialLinesDataFrame(coast,coast@data) 
 
@@ -43,21 +40,22 @@ ggplot() +
 min_degrees <- gDistance(loc_wkt,coast)
 min_degrees
 
-# Transform the WGS84 longlat projections to EPSG 3577 - http://spatialreference.org/ref/epsg/3577/
-coast_3577 <- spTransform(coast,CRS(epsg.3577))
-loc_3577 <- spTransform(loc_wkt, CRS(epsg.3577))
+dist_line <- dist2Line(loc_wkt, coast)
+closest_longitude <- dist_line[2]
+closest_latitude <- dist_line[3]
 
-# Find minimum distnce to the coast
-dist <- gDistance(loc_3577,coast_3577)
+# Transform the WGS84 longlat projections to EPSG 3577 - http://spatialreference.org/ref/epsg/3577/
+#coast_3577 <- spTransform(coast,CRS(epsg.3577))
+#loc_3577 <- spTransform(loc_wkt, CRS(epsg.3577))
+
+# Find minimum distance to the coast
+#dist <- gDistance(loc_3577,coast_3577)
 
 # Stole this bit of code from - https://stackoverflow.com/questions/27384403/calculating-minimum-distance-between-a-point-and-the-coast-in-the-uk
 # Creates a nice chart along with finding the closest point on the coast
 th     <- seq(0,2*pi,len=1000)
 circle <- cbind(1.00001*min_degrees*cos(th)+loc_wkt$x,1.00001*min_degrees*sin(th)+loc_wkt$y)
 sp_circle <- SpatialLines(list(Lines(list(Line(circle)),ID="1")),proj4string=CRS(wgs.84))
-closest_point <- gIntersection(sp_circle,coast)
-closest_longitude <- closest_point$x[1]
-closest_latitude <- closest_point$y[1]
 
 # Plot on map
 plot(coast, asp=1)
