@@ -15,7 +15,7 @@ Uluru is a site of imporance to the local *Pitjantjatjara* and *Yankunyjatjara* 
 
 This vignette will use R to answer the questions what is the minimum distance to the coast from Uluru? And where is that point?
 
-To start the following libraries will need to be loaded. 
+To start the following libraries will need to be loaded for use. 
 
 ```{r library, message = FALSE, warning = FALSE}
 library(tmaptools)
@@ -92,11 +92,25 @@ paste("The location of the closest point on the coast to Uluru is at: ",closest_
 
 The answer to the original question has been obtained. Uluru is 679.35 kilometres from the coast and the closest point is located on the South Australian coast at the head of the Great Australian Bight.
 
-A map of the world showing the point on the earth where Uluru is located and a circle around Uluru of the minimum distance from the coast can be plotted to give a more visual represenation of the closest poiunt on the coast to Uluru.
+## Visualisation
+TO get a better sense of where Uluru is located and the closest point on the coast a map can be created using `ggplot`.
+
+As the map will be based on latitude and longitude the first step is to identify the distance between Uluru and the closest point on the coast in degrees of latitude and longitude rather than in kilometres. This can be done through the use of the gDistance function in the `rgeos` function.
+
+Like the dist2Line function described earlier the gDistance function finds the minimum distance between two spatial objects. The difference is that gDistance will return the distance in the units of the projections of the spatial objects passed in. As we are using the WGS84 the distance will be returned in degress of latitude and longitude. The gDistance function could have been used to calculate the distance in kilometres but the projection of the location of Uluru and the coast would need to have been changed to one that would output kilometres (or metres). 
+
+```{r distance_degrees, message = FALSE, warning = FALSE}
+# Distance in degrees
+dist_degrees <- gDistance(loc_wkt,coast)
+```
+
+After the distance in degrees has been calculated the circumfrence of the circle around Uluru can be determined. 1000 points on the circumfrence of the circle are calculated using the standard equation 2pir and then added to the latitude and longitude of Uluru so as to be correctly centred on the map.
+
+The `ggplot2` package is used to plot the map with the latitude and longitude constrained to focus on Australia.
 
 ```{r plot, message = FALSE, warning = FALSE}
+# Circumfrence of the circle 2pir
 th <- seq(0, 2 * pi, len = 1000)
-dist_degrees <- gDistance(loc_wkt,coast)
 circle <- cbind(1.00001 * dist_degrees * cos(th) + loc_wkt$x,
                 1.00001 * dist_degrees * sin(th) + loc_wkt$y)
 
