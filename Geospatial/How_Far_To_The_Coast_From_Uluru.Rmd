@@ -1,6 +1,5 @@
 ---
 title: "How far is Uluru from the Sea?"
-author: "Will Kent"
 output: html_document
 ---
 
@@ -26,28 +25,28 @@ library(ggplot2)
 ```
 
 ## Geospatial Data
-Data relating to the surface of the earth, or geospatial data, can be a little confusing for the uninitiated so we'll start with some basics.
+Data relating to the surface of the Earth, or geospatial data, can be a little confusing for the uninitiated so we'll start with some basics.
 
 ### Geospatial Objects
 The basic geospatial objects are:
 
-* Point - a physical location on the earth expressed by two coordinates (e.g.latitude and longitude),
+* Point - a physical location on the Earth expressed by two coordinates (e.g.latitude and longitude),
 * Linestring - a sequence of 2 or more connected points,
 * Polygon - a closed collection of connected points that define an area,
 * Multipolygons - a collection of polygons.
 
 ### World Geodetic System
-In the 1950's the United States Department of Defence, together with scientists from around the world, commenced efforts to establish a system to which geodetic data (measurements of the earth) could be referred. This collaboration established a common latitude, longitude and elevation co-ordinate reference system (CRS) which was called World Geodetic System 1960 (WGS60).
+In the 1950's the United States Department of Defence, together with scientists from around the world, commenced efforts to establish a system to which geodetic data (measurements of the Earth) could be referred. This collaboration established a common latitude, longitude and elevation co-ordinate reference system (CRS) which was called World Geodetic System 1960 (WGS60).
 
-Since 1960 the World Geodetic System (WGS) has been updated a number of times to account for new information and data that effects measurements of the earths surface. The last such updated was in 1984 and formed the WGS84 used today as the standard reference system for modern technologies based on the Global Positioning Service (GPS). 
+Since 1960 the World Geodetic System (WGS) has been updated a number of times to account for new information and data that effects measurements of the Earth's surface. The last such updated was in 1984 and formed the WGS84 used today as the standard reference system for modern technologies based on the Global Positioning Service (GPS). 
 
-The use of WGS84 to place objects on the earths surface is a common practice but there are other methods available. In this instance WGS84 will be used as the CRS and is set below for future use.
+The use of WGS84 to place objects on the Earth's surface is a common practice but there are other methods available. In this instance WGS84 will be used as the CRS and is set below for future use.
 ```{r projections}
 wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 ```
 
 ## Locating Uluru
-The first step is to identify where Uluru is located on the earth's surface. There are a number of packages and services that provide the ability to obtain the co-ordinates, or latitude and longitude, of an address or significant place. In this example the `geocode_OSM` function in the `tmaptools` package will be used. This function uses the Open Street Maps (OSM) Nominatim (<http://nominatim.openstreetmap.org/>) to identify the latitude and longitude for Uluru.
+The first step is to identify where Uluru is located on the Earth's surface. There are a number of packages and services that provide the ability to obtain the co-ordinates, or latitude and longitude, of an address or significant place. In this example the `geocode_OSM` function in the `tmaptools` package will be used. This function uses the Open Street Maps (OSM) Nominatim (<http://nominatim.openstreetmap.org/>) to identify the latitude and longitude for Uluru.
 
 The first term passed to the `geocode_OSM` function is the search term, in this case Uluru. The second term is the CRS or projection to be used, in this instance WGS84. The `geocode_OSM` accepts other parameters that control what information is returned and in what format. The server to use can also be set if a local OSM Nominatim server is available. Further details an be found in R using `?geocode_OSM`. 
 ```{r uluru_geocode, message = FALSE, warning = FALSE}

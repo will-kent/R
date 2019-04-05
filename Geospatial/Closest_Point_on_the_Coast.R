@@ -30,7 +30,7 @@ unzip(zipfile = "coastlines.zip",
       exdir = 'ne-coastlines-10m')
 
 coast <- readOGR("ne-coastlines-10m/ne_10m_coastline.shp", p4s = wgs.84)
-coast
+summary(coast)
 # Turn Shape file to data.frame
 coast_df <- SpatialLinesDataFrame(coast,coast@data) 
 
