@@ -41,10 +41,21 @@ In the 1950's the United States Department of Defence, together with scientists 
 
 Since 1960 the World Geodetic System (WGS) has been updated a number of times to account for new information and data that effects measurements of the earths surface. The last such updated was in 1984 and formed the WGS84 used today as the standard reference system for modern technologies based on the Global Positioning Service (GPS). 
 
-The use of WGS84 to place objects on the earths surface is a common practice but there are other methods available. In this instance WGS84 will be used as the CRS and is set below for future use.
+The use of WGS84 to place objects on the earths surface is a common practice but there are other methods available. In this instance WGS84 will be used as the CRS and is set below using the `get_proj4` function within the `tmaptools` function. The `get_proj4` function requires a projection and, optionally, an output can be defined to determine how the projection is output, in this case we want the projection as a string.
+
+As an aside WGS84 is not really a projection and more a plot of co-ordinates, but in this case it works. A list of the various map projections can be found at http://en.wikipedia.org/wiki/List_of_map_projections.
 ```{r projections}
-wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+wgs84 <- get_proj4("WGS84", output = "character")
+wgs84
 ```
+
+The value of the _wgs84_ variable contains a few parts:
+
+* proj - the projection, in this case longlat, which, as previously discussed not really a projection.
+* ellps - ellipsoide
+* datum - 
+* no_defs -
+* towgs84 -
 
 ## Locating Uluru
 The first step is to identify where Uluru is located on the earth's surface. There are a number of packages and services that provide the ability to obtain the co-ordinates, or latitude and longitude, of an address or significant place. In this example the geocode_OSM function in the `tmaptools` package will be used. This function uses the Open Street Maps (OSM) Nominatim (<http://nominatim.openstreetmap.org/>) to identify the location of an address or place.
@@ -76,6 +87,11 @@ unzip(zipfile = "coastlines.zip",
       exdir = 'ne-coastlines-10m')
 
 coast <- readOGR("ne-coastlines-10m/ne_10m_coastline.shp", p4s = wgs84)
+```
+
+The output from the readOGR function is a spatial object data frame.
+``` {r coast_output}
+coast
 ```
 
 ## Distance calculation
