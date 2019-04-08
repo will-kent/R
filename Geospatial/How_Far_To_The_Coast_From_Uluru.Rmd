@@ -1,6 +1,5 @@
 ---
-title: "How far is Uluru to the coast?"
-author: "Will Kent"
+title: "How far is Uluru from the Sea?"
 output: html_document
 ---
 
@@ -9,15 +8,15 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Introduction
-Uluru, Ayers Rock or simply "the Rock" is a large sandstone monolith located in central Australia. It is thought to have formed approximately 550 million years ago. It stands 348 metres above the surrounding plain and is listed as a UNESCO World Heritage Site.
+Uluru, Ayers Rock or simply "the Rock" is a large sandstone monolith located in central Australia. It is thought to have formed approximately 550 million years ago and stands 348 metres above the surrounding plain. It is listed as a United Nations Educational, Scientific and Cultural Organisation (UNESCO) World Heritage Site.
 
-Uluru is a site of imporance to the local *Pitjantjatjara* and *Yankunyjatjara* Aboriginal people. Uluru, and the surrounding area, is of great spiritual and cultural significance. 
+Uluru, and the surrounding area, is of great spiritual and cultural significance to the local *Pitjantjatjara* and *Yankunyjatjara* Aboriginal people. They believe Uluru was formed by ancestral beings during the Dreamtime and they have been its custodians for thousands of years.
 
-This vignette will use R to answer the questions what is the minimum distance to the coast from Uluru? And where is that point?
+In this vignette will use R to answer the questions what is the minimum distance to the sea from Uluru? And where is that point?
 
 To start the following libraries will need to be loaded for use. 
 
-```{r library, message = FALSE, warning = FALSE}
+```{r library, message = FALSE, warning = FALSE, error = FALSE}
 library(tmaptools)
 library(rgeos)
 library(geosphere)
@@ -26,20 +25,20 @@ library(ggplot2)
 ```
 
 ## Geospatial Data
-Data relating to the surface of the earth, or geospatial data, can be a little confusing for the uninitiated so we'll start with some basics.
+Data relating to the surface of the Earth, or geospatial data, can be a little confusing for the uninitiated so we'll start with some basics.
 
 ### Geospatial Objects
 The basic geospatial objects are:
 
-* Point - a physical location on the earth expressed by two coordinates (e.g.latitude and longitude),
+* Point - a physical location on the Earth expressed by two coordinates (e.g.latitude and longitude),
 * Linestring - a sequence of 2 or more connected points,
-* Polygon - a closed collection of connected points that define a geographic boundary,
+* Polygon - a closed collection of connected points that define an area,
 * Multipolygons - a collection of polygons.
 
 ### World Geodetic System
-In the 1950's the United States Department of Defence, together with scientists from around the world, commenced efforts to establish a system to which geodetic data (measurements of the earth) could be referred. This collaboration established a common latitude, longitude and elevation co-ordinate reference system (CRS) which was called World Geodetic System 1960 (WGS60).
+In the 1950's the United States Department of Defence, together with scientists from around the world, commenced efforts to establish a system to which geodetic data (measurements of the Earth) could be referred. This collaboration established a common latitude, longitude and elevation co-ordinate reference system (CRS) which was called World Geodetic System 1960 (WGS60).
 
-Since 1960 the World Geodetic System (WGS) has been updated a number of times to account for new information and data that effects measurements of the earths surface. The last such updated was in 1984 and formed the WGS84 used today as the standard reference system for modern technologies based on the Global Positioning Service (GPS). 
+Since 1960 the World Geodetic System (WGS) has been updated a number of times to account for new information and data that effects measurements of the Earth's surface. The last such updated was in 1984 and formed the WGS84 used today as the standard reference system for modern technologies based on the Global Positioning Service (GPS). 
 
 The use of WGS84 to place objects on the earths surface is a common practice but there are other methods available. In this instance WGS84 will be used as the CRS and is set below using the `get_proj4` function within the `tmaptools` function. The `get_proj4` function requires a projection and, optionally, an output can be defined to determine how the projection is output, in this case we want the projection as a string.
 
@@ -58,27 +57,27 @@ The value of the _wgs84_ variable contains a few parts:
 * towgs84 -
 
 ## Locating Uluru
-The first step is to identify where Uluru is located on the earth's surface. There are a number of packages and services that provide the ability to obtain the co-ordinates, or latitude and longitude, of an address or significant place. In this example the geocode_OSM function in the `tmaptools` package will be used. This function uses the Open Street Maps (OSM) Nominatim (<http://nominatim.openstreetmap.org/>) to identify the location of an address or place.
+The first step is to identify where Uluru is located on the Earth's surface. There are a number of packages and services that provide the ability to obtain the co-ordinates, or latitude and longitude, of an address or significant place. In this example the `geocode_OSM` function in the `tmaptools` package will be used. This function uses the Open Street Maps (OSM) Nominatim (<http://nominatim.openstreetmap.org/>) to identify the latitude and longitude for Uluru.
 
-The first term passed to the geocode_OSM function is the search term, in this case Uluru. The second term is the CRS or projection to be used, in this instance the WGS84 CRS. The geocode_OSM accepts other parameters that control what information is returned and in what format. The server to use can also be set if a local OSM Nominatim server is available. Further details an be found in R using `?geocode_OSM`. 
+The first term passed to the `geocode_OSM` function is the search term, in this case Uluru. The second term is the CRS or projection to be used, in this instance WGS84. The `geocode_OSM` accepts other parameters that control what information is returned and in what format. The server to use can also be set if a local OSM Nominatim server is available. Further details an be found in R using `?geocode_OSM`. 
 ```{r uluru_geocode, message = FALSE, warning = FALSE}
 loc <- geocode_OSM("Uluru", projection = wgs84)
 longitude <- loc$coords["x"]
 latitude <- loc$coords["y"]
 ```
 
-Now that the co-ordinates for Uluru have been obtained the point needs to be converted to a geometry object. This conversion is required for subsequent calculation of distances between Uluru and the coast.
+Now that the latitude and longitude co-ordinates for Uluru have been obtained the point needs to be converted to a geometry object. This conversion is required for subsequent calculations of distance between Uluru and the sea.
 
-To perform this conversion the readWKT function from the `rgeos` package is used. The readWKT function reads the Well Known Text (WKT), created by concatenating the latitude and longitude into the format _POINT(longitude latitude)_, and outputs a spatial object in the specified WGS84.
+To perform this conversion the `readWKT` function from the `rgeos` package is used. The `readWKT` function reads the Well Known Text (WKT), created by concatenating the latitude and longitude into the format _POINT(longitude latitude)_, and outputs a spatial object in the specified WGS84.
 ```{r uluru_wkt, message = FALSE, warning = FALSE}
-loc_txt <- paste("POINT(",longitude," ",latitude,")")
+loc_txt <- paste("POINT(",longitude,latitude,")")
 loc_wkt <- readWKT(loc_txt, p4s = CRS(wgs84))
 ```
 
-## The Coast Line
-The coast forms a geographic boundary between land and sea. The land masses contained within these boundaries form polygons and collection of the combined polygons of each land mass forms a multipolygon. Fortunately for this task there is a publicly available shape file that conatins this multipolygon. The shape file is available on the <http://www.naturalearthdata.com> website.
+## The Coastline
+The coastline forms a geographic boundary between land and sea and fortunately for this task there is a publicly available shape file that contains the coast line in a spatial object. The shape file is available on the <http://www.naturalearthdata.com> website.
 
-The coastline shape file is downloaded and unzipped. The shape file is then loaded into a spatial object using the readOGR function in the `rgdal` package. The readOGR function reads the unzipped shape file and returns a spatial object.
+The coastline shape file is downloaded and unzipped. The shape file is then loaded into a spatial object using the readOGR function in the `rgdal` package. The `readOGR` function reads the unzipped shape file and returns a spatial object.
 ```{r download, message = FALSE, warning = FALSE, results = 'hide'}
 download.file("http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/physical/ne_10m_coastline.zip", 
               destfile = 'coastlines.zip')
@@ -95,34 +94,29 @@ coast
 ```
 
 ## Distance calculation
-Now that the location of Uluru and the coast lines of the world are known and loaded into R the minimum "as the crow flies" distance from Uluru to the coast can be calculated. This operation can be performed using the dist2Line function in the `geosphere` package. The dist2Line function returns a matrix with the distance, longitude and latitude of the nearest point on the line. The distance returned is measured in metres; the value is divided by 1000 to obtain the distance in kilometres.
+Now that the location of Uluru and the coastlines of the world are known and loaded into R the minimum "as the crow flies" distance from Uluru to the sea can be calculated. This operation can be performed using the `dist2Line` function in the `geosphere` package. The dist2Line function returns a matrix with the distance, longitude and latitude of the nearest point on the line. The distance returned is measured in metres; the value is divided by 1000 to obtain the distance in kilometres.
 
 ```{r wgs84_distance, message = FALSE, warning = FALSE}
 dist_line <- dist2Line(loc_wkt, coast)
 closest_longitude <- dist_line[2]
 closest_latitude <- dist_line[3]
-
-paste("Distance from Uluru to the coast: ",dist_line[1]/1000)
-paste("The location of the closest point on the coast to Uluru is at: ",closest_longitude," ",closest_latitude)
 ```
-
-The answer to the original question has been obtained. Uluru is 679.35 kilometres from the coast and the closest point is located on the South Australian coast at the head of the Great Australian Bight.
+The distance from Uluru to the sea is `r dist_line[1]/1000`.
+The location of the closest point on the coast to Uluru is at `r closest_longitude` `r closest_latitude` which is located on the South Australian coast at the head of the Great Australian Bight.
 
 ## Visualisation
-TO get a better sense of where Uluru is located and the closest point on the coast a map can be created using `ggplot`.
+TO get a better sense of where Uluru is located, and the closest point on the coast, a map can be created using `ggplot`.
 
-As the map will be based on latitude and longitude the first step is to identify the distance between Uluru and the closest point on the coast in degrees of latitude and longitude rather than in kilometres. This can be done through the use of the gDistance function in the `rgeos` function.
+As the map will be based on latitude and longitude the first step is to identify the distance between Uluru and the closest point to the sea in degrees of latitude and longitude rather than in kilometres. This is performed through the use of the gDistance function in the `rgeos` function.
 
-Like the dist2Line function described earlier the gDistance function finds the minimum distance between two spatial objects. The difference is that gDistance will return the distance in the units of the projections of the spatial objects passed in. As we are using the WGS84 the distance will be returned in degress of latitude and longitude. The gDistance function could have been used to calculate the distance in kilometres but the projection of the location of Uluru and the coast would need to have been changed to one that would output kilometres (or metres). 
+Like the `dist2Line` function described earlier the `gDistance` function finds the minimum distance between two spatial objects. The difference is that `gDistance` will return the distance in the units of the projections of the spatial objects passed in. As we are using the WGS84 the distance will be returned in degress of latitude and longitude. The `gDistance` function could have been used to calculate the distance in kilometres but the projection of the location of Uluru and the coast would need to have been changed to one that output kilometres (or metres). 
 
 ```{r distance_degrees, message = FALSE, warning = FALSE}
 # Distance in degrees
 dist_degrees <- gDistance(loc_wkt,coast)
 ```
 
-After the distance in degrees has been calculated the circumfrence of the circle around Uluru can be determined. 1000 points on the circumfrence of the circle are calculated using the standard equation 2pir and then added to the latitude and longitude of Uluru so as to be correctly centred on the map.
-
-The `ggplot2` package is used to plot the map with the latitude and longitude constrained to focus on Australia.
+After the distance in degrees has been calculated the circumfrence of the circle around Uluru can be determined. 1000 points on the circumfrence of the circle are calculated using the standard equation $2\pi r$ and then added to the latitude and longitude of Uluru so as to be correctly centred on the map.
 
 ```{r plot, message = FALSE, warning = FALSE}
 # Circumfrence of the circle 2pir
