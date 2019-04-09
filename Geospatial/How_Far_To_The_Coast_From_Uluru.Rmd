@@ -77,9 +77,9 @@ loc_wkt <- readWKT(loc_txt, p4s = CRS(wgs84))
 ```
 
 ## The Coastline
-The coastline forms a geographic boundary between land and sea and fortunately for this task there is a publicly available shape file that contains the coast line in a spatial object. The shape file is available on the <http://www.naturalearthdata.com> website.
+The coastline is a geographic boundary between land and sea. To find a point on this boundary fortunately there is a publicly available shape (.shp) file that contains the coastline as a linestring (i.e. a collection of connected points). The shape file is available on the <http://www.naturalearthdata.com> website.
 
-The coastline shape file is downloaded and unzipped. The shape file is then loaded into a spatial object using the readOGR function in the `rgdal` package. The `readOGR` function reads the unzipped shape file and returns a spatial object.
+The coastline shape file is downloaded and unzipped. It is then loaded into a spatial object using the readOGR function from the `rgdal` package.
 ```{r download, message = FALSE, warning = FALSE, results = 'hide'}
 download.file("http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/physical/ne_10m_coastline.zip", 
               destfile = 'coastlines.zip')
@@ -90,13 +90,13 @@ unzip(zipfile = "coastlines.zip",
 coast <- readOGR("ne-coastlines-10m/ne_10m_coastline.shp", p4s = wgs84)
 ```
 
-The output from the readOGR function is a spatial object data frame.
+The output from the readOGR function is an object of class spatial data frame.
 ``` {r coast_output}
 coast
 ```
 
 ## Distance calculation
-Now that the location of Uluru and the coastlines of the world are known and loaded into R the minimum "as the crow flies" distance from Uluru to the sea can be calculated. This operation can be performed using the `dist2Line` function in the `geosphere` package. The dist2Line function returns a matrix with the distance, longitude and latitude of the nearest point on the line. The distance returned is measured in metres; the value is divided by 1000 to obtain the distance in kilometres.
+Now that the location of Uluru and the coastlines of the world are known and loaded the minimum "as the crow flies" distance from Uluru to the sea can be calculated. This operation can be performed using the `dist2Line` function in the `geosphere` package. The dist2Line function returns a matrix with the distance, longitude and latitude of the nearest point on the line. The distance returned is measured in metres; the value is divided by 1000 to obtain the distance in kilometres.
 
 ```{r wgs84_distance, message = FALSE, warning = FALSE}
 dist_line <- dist2Line(loc_wkt, coast)
@@ -107,7 +107,7 @@ The distance from Uluru to the sea is `r dist_line[1]/1000`.
 The location of the closest point on the coast to Uluru is at `r closest_longitude` `r closest_latitude` which is located on the South Australian coast at the head of the Great Australian Bight.
 
 ## Visualisation
-TO get a better sense of where Uluru is located, and the closest point on the coast, a map can be created using `ggplot`.
+To get a better sense of where Uluru is located, and the closest point on the coast, a map can be created using `ggplot`.
 
 As the map will be based on latitude and longitude the first step is to identify the distance between Uluru and the closest point to the sea in degrees of latitude and longitude rather than in kilometres. This is performed through the use of the gDistance function in the `rgeos` function.
 
@@ -136,3 +136,5 @@ ggplot() +
   coord_fixed()
 ```
 
+## Conclusion
+Through the use of a number of R packages we've ben able to answer the initial question and visualise that data on a map. This technique can be applied to any point on the Earth's surface to detemine the nearest coastline, regardless of whether that point is located on a land mass or in the sea.

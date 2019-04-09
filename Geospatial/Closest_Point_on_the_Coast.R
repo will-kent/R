@@ -6,7 +6,6 @@ library(rgdal) # for CRS
 #library(raster)
 library(ggplot2)
 library(geosphere)
-.libPaths()
 
 # Set up projections - IMPORTANT - confirm the regions for projections are correct 3577 covers all of Australia
 #epsg.3577 <- "+proj=aea +lat_1=-18 +lat_2=-36 +lat_0=0 +lon_0=132 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=km +no_defs"
@@ -15,7 +14,6 @@ wgs.84 <- get_proj4("WGS84", output = "character")
 
 # Use geocode_OSM (Open Street Maps) to get co-oridinates of Uluru
 loc <- geocode_OSM("Uluru", projection = wgs.84)
-?get_proj4
 longitude <- loc$coords["x"]
 latitude <- loc$coords["y"]
 
