@@ -1,4 +1,3 @@
-
 library(tmaptools) # for geocode_OSM
 library(rgeos) # for readWKT
 #library(maptools)
@@ -16,7 +15,7 @@ wgs.84 <- get_proj4("WGS84", output = "character")
 
 # Use geocode_OSM (Open Street Maps) to get co-oridinates of Uluru
 loc <- geocode_OSM("Uluru", projection = wgs.84)
-
+?get_proj4
 longitude <- loc$coords["x"]
 latitude <- loc$coords["y"]
 

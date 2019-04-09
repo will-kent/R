@@ -40,26 +40,28 @@ In the 1950's the United States Department of Defence, together with scientists 
 
 Since 1960 the World Geodetic System (WGS) has been updated a number of times to account for new information and data that effects measurements of the Earth's surface. The last such updated was in 1984 and formed the WGS84 used today as the standard reference system for modern technologies based on the Global Positioning Service (GPS). 
 
-The use of WGS84 to place objects on the earths surface is a common practice but there are other methods available. In this instance WGS84 will be used as the CRS and is set below using the `get_proj4` function within the `tmaptools` function. The `get_proj4` function requires a projection and, optionally, an output can be defined to determine how the projection is output, in this case we want the projection as a string.
+The use of WGS84 to place objects on the earths surface is a common practice but there are other methods available. In this instance WGS84 will be used as the CRS and is set below using the `get_proj4` function within the `tmaptools` package. The `get_proj4` function requires a projection and, optionally, an output can be defined to determine how the projection is output, in this case we want the projection as a string.
 
-As an aside WGS84 is not really a projection and more a plot of co-ordinates, but in this case it works. A list of the various map projections can be found at http://en.wikipedia.org/wiki/List_of_map_projections.
+As an aside WGS84 is being used but it's not really a projection and more a plot of co-ordinates. A projection is the method by which a three dimensional CRS is displayed on a flat surface; WGS84 is the CRS rather than the projection but it can be used in this instance. A list of the various map projections can be found at http://en.wikipedia.org/wiki/List_of_map_projections, or for a more light-hearted version https://xkcd.com/977/.
 ```{r projections}
 wgs84 <- get_proj4("WGS84", output = "character")
 wgs84
 ```
 
-The value of the _wgs84_ variable contains a few parts:
+The value of the _wgs84_ variable contains a few parts.
 
-* proj - the projection, in this case longlat, which, as previously discussed not really a projection.
-* ellps - ellipsoide
-* datum - 
-* no_defs -
-* towgs84 -
+* proj - the projection of _longlat_ represent the WGS84 CRS. As discussed this isn't a true projection.
+* ellps - how the earth's "roundness" is calculated.
+* datum - datums are the CRS being used. Every spatial dataset has a datum and some datums are only accurate in certain locations in the world.
+* no_defs - ensures no defaults are read from the defaults file.
+* towgs84 - transforms the origin and rotation of the datum to WGS84.
+
+The International Association of Oil and Gas Producers has a collection of projections based on best practices for surveying and applied geodesy and often identified with an EPSG code. These can be found at http://www.epsg-registry.org/.
 
 ## Locating Uluru
 The first step is to identify where Uluru is located on the Earth's surface. There are a number of packages and services that provide the ability to obtain the co-ordinates, or latitude and longitude, of an address or significant place. In this example the `geocode_OSM` function in the `tmaptools` package will be used. This function uses the Open Street Maps (OSM) Nominatim (<http://nominatim.openstreetmap.org/>) to identify the latitude and longitude for Uluru.
 
-The first term passed to the `geocode_OSM` function is the search term, in this case Uluru. The second term is the CRS or projection to be used, in this instance WGS84. The `geocode_OSM` accepts other parameters that control what information is returned and in what format. The server to use can also be set if a local OSM Nominatim server is available. Further details an be found in R using `?geocode_OSM`. 
+The first term passed to the `geocode_OSM` function is the search term, the second term is the CRS or projection to be used, in this instance WGS84. The `geocode_OSM` accepts other parameters that control what information is returned and in what format. The server to use can also be set if a local OSM Nominatim server is available. Further details an be found in R using `?geocode_OSM`. 
 ```{r uluru_geocode, message = FALSE, warning = FALSE}
 loc <- geocode_OSM("Uluru", projection = wgs84)
 longitude <- loc$coords["x"]
