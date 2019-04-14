@@ -14,7 +14,7 @@ Uluru, and the surrounding area, is of great spiritual and cultural significance
 
 In this vignette will use R to answer the questions what is the minimum distance to the sea from Uluru? And where is that point?
 
-To start the following libraries will need to be loaded for use. 
+To start the following libraries are loaded. 
 
 ```{r library, message = FALSE, warning = FALSE, error = FALSE}
 library(tmaptools)
@@ -52,16 +52,16 @@ The value of the _wgs84_ variable contains a few parts.
 
 * proj - the projection of _longlat_ represent the WGS84 CRS. As discussed this isn't a true projection.
 * ellps - how the earth's "roundness" is calculated.
-* datum - datums are the CRS being used. Every spatial dataset has a datum and some datums are only accurate in certain locations in the world.
+* datum - datums are the CRS being used. Every spatial dataset has a datum and some datums are only accurate in certain areas of the world.
 * no_defs - ensures no defaults are read from the defaults file.
 * towgs84 - transforms the origin and rotation of the datum to WGS84.
 
 The International Association of Oil and Gas Producers has a collection of projections based on best practices for surveying and applied geodesy and often identified with an EPSG code. These can be found at http://www.epsg-registry.org/.
 
 ## Locating Uluru
-The first step is to identify where Uluru is located on the Earth's surface. There are a number of packages and services that provide the ability to obtain the co-ordinates, or latitude and longitude, of an address or significant place. In this example the `geocode_OSM` function in the `tmaptools` package will be used. This function uses the Open Street Maps (OSM) Nominatim (<http://nominatim.openstreetmap.org/>) to identify the latitude and longitude for Uluru.
+The first step is to identify the point on the Earth's surface where Uluru is located. There are a number of packages and services that provide the ability to obtain the co-ordinates, or latitude and longitude, of an address or significant place. In this example the `geocode_OSM` function in the `tmaptools` package will be used. This function uses the Open Street Maps (OSM) Nominatim (<http://nominatim.openstreetmap.org/>) to identify the latitude and longitude for Uluru.
 
-The first term passed to the `geocode_OSM` function is the search term, the second term is the CRS or projection to be used, in this instance WGS84. The `geocode_OSM` accepts other parameters that control what information is returned and in what format. The server to use can also be set if a local OSM Nominatim server is available. Further details an be found in R using `?geocode_OSM`. 
+The first parameter passed to the `geocode_OSM` function is the search term, the second is the CRS or projection to be used, in this instance WGS84. The `geocode_OSM` accepts other parameters that control what information is returned and in what format. The server to use can also be set if a local OSM Nominatim server is available. Further details an be found in R using `?geocode_OSM`. 
 ```{r uluru_geocode, message = FALSE, warning = FALSE}
 loc <- geocode_OSM("Uluru", projection = wgs84)
 longitude <- loc$coords["x"]
@@ -77,9 +77,9 @@ loc_wkt <- readWKT(loc_txt, p4s = CRS(wgs84))
 ```
 
 ## The Coastline
-The coastline is a geographic boundary between land and sea. To find a point on this boundary fortunately there is a publicly available shape (.shp) file that contains the coastline as a linestring (i.e. a collection of connected points). The shape file is available on the <http://www.naturalearthdata.com> website.
+The coastline is a geographic boundary between land and sea. Fortunately to help find a point on this boundary there is a publicly available shape (.shp) file that contains the coastline as a linestring (i.e. a collection of connected points). The shape file is available on the <http://www.naturalearthdata.com> website.
 
-The coastline shape file is downloaded and unzipped. It is then loaded into a spatial object using the readOGR function from the `rgdal` package.
+The coastline shape file is downloaded and unzipped. It is then loaded into a spatial object using the `readOGR` function from the `rgdal` package.
 ```{r download, message = FALSE, warning = FALSE, results = 'hide'}
 download.file("http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/physical/ne_10m_coastline.zip", 
               destfile = 'coastlines.zip')
@@ -103,7 +103,7 @@ dist_line <- dist2Line(loc_wkt, coast)
 closest_longitude <- dist_line[2]
 closest_latitude <- dist_line[3]
 ```
-The distance from Uluru to the sea is `r dist_line[1]/1000`.
+The distance from Uluru to the sea is `r dist_line[1]/1000` kilometres.
 The location of the closest point on the coast to Uluru is at `r closest_longitude` `r closest_latitude` which is located on the South Australian coast at the head of the Great Australian Bight.
 
 ## Visualisation
@@ -137,4 +137,4 @@ ggplot() +
 ```
 
 ## Conclusion
-Through the use of a number of R packages we've ben able to answer the initial question and visualise that data on a map. This technique can be applied to any point on the Earth's surface to detemine the nearest coastline, regardless of whether that point is located on a land mass or in the sea.
+Through the use of a number of R packages we've ben able to answer the initial question and visualise the data on a map. This technique can be applied to any point on the Earth's surface to detemine the nearest coastline, regardless of whether that point is located on a land mass or in the sea.
