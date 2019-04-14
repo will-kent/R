@@ -8,11 +8,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Introduction
-Uluru, Ayers Rock or simply "the Rock" is a large sandstone monolith located in central Australia. It is thought to have formed approximately 550 million years ago and stands 348 metres above the surrounding plain. It is listed as a United Nations Educational, Scientific and Cultural Organisation (UNESCO) World Heritage Site.
+Uluru, Ayers Rock or simply "the Rock" is a large sandstone monolith located in central Australia. It is thought to have formed 550 million years ago and stands 348 metres above the surrounding plain. It is listed as a United Nations Educational, Scientific and Cultural Organisation (UNESCO) World Heritage Site.
 
 Uluru, and the surrounding area, is of great spiritual and cultural significance to the local *Pitjantjatjara* and *Yankunyjatjara* Aboriginal people. They believe Uluru was formed by ancestral beings during the Dreamtime and they have been its custodians for thousands of years.
 
-In this vignette will use R to answer the questions what is the minimum distance to the sea from Uluru? And where is that point?
+Despite there being an abundance of information on Uluru no where does it detail how far it is from the sea. In this vignette will use R to determine far it is to the sea from Uluru? And where the closest point on the coast is?
 
 To start the following libraries are loaded. 
 
@@ -56,7 +56,7 @@ The value of the _wgs84_ variable contains a few parts.
 * no_defs - ensures no defaults are read from the defaults file.
 * towgs84 - transforms the origin and rotation of the datum to WGS84.
 
-The International Association of Oil and Gas Producers has a collection of projections based on best practices for surveying and applied geodesy and often identified with an EPSG code. These can be found at http://www.epsg-registry.org/.
+The International Association of Oil and Gas Producers has a collection of projections based on best practices for surveying and applied geodesy. These are often identified with an EPSG code. A registry of these projections can be found at http://www.epsg-registry.org/.
 
 ## Locating Uluru
 The first step is to identify the point on the Earth's surface where Uluru is located. There are a number of packages and services that provide the ability to obtain the co-ordinates, or latitude and longitude, of an address or significant place. In this example the `geocode_OSM` function in the `tmaptools` package will be used. This function uses the Open Street Maps (OSM) Nominatim (<http://nominatim.openstreetmap.org/>) to identify the latitude and longitude for Uluru.
@@ -118,7 +118,7 @@ Like the `dist2Line` function described earlier the `gDistance` function finds t
 dist_degrees <- gDistance(loc_wkt,coast)
 ```
 
-After the distance in degrees has been calculated the circumfrence of the circle around Uluru can be determined. 1000 points on the circumfrence of the circle are calculated using the standard equation $2\pi r$ and then added to the latitude and longitude of Uluru so as to be correctly centred on the map.
+After the distance in degrees has been calculated the circumference of the circle around Uluru can be determined. 1000 points on the circumference of the circle are calculated using the standard equation $2\pi r$ and then added to the latitude and longitude of Uluru so as to be correctly centred on the map.
 
 ```{r plot, message = FALSE, warning = FALSE}
 # Circumfrence of the circle 2pir
