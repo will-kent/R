@@ -21,7 +21,7 @@ Once the above is complete click **Register application**
 
 6. Open the R script file **Github Extract.R** and add the application name, client id (or ""key") and client secret to the _myapp_ variable on line 18.
 
-7. On line 27 change the uri to be the repo for which the commit history is required. This will be in the format "https://api.github.com/repos/<owner>/<repo_name>/commits?per_page=50&page=" where <owner> needs to be replaced by the "owner" of the repo and <repo_name> needs to be replaced by the name of the repository.
+7. On line 27 change the uri to be the repo for which the commit history is required. This will be in the format `https://api.github.com/repos/<owner>/<repo_name>/commits?per_page=50&page=` where ```<owner>``` needs to be replaced by the "owner" of the repo and ```<repo_name>``` needs to be replaced by the name of the repository.
   
 8. Run the code
   
