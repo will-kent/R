@@ -137,4 +137,4 @@ ggplot() +
 ```
 
 ## Conclusion
-Through the use of a number of R packages we've ben able to answer the initial question and visualise the data on a map. This technique can be applied to any point on the Earth's surface to detemine the nearest coastline, regardless of whether that point is located on a land mass or in the sea.
+Through the use of a number of R packages we've been able to answer the initial question and visualise the data on a map. This technique can be applied to any point on the Earth's surface to detemine the nearest coastline, regardless of whether that point is located on a land mass or in the sea.
