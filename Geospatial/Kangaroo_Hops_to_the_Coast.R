@@ -84,6 +84,22 @@ ggplot() +
   scale_y_continuous(limits = c(-45, -5)) +
   coord_fixed()
 
-# Now get elevation of points, a SpatialPointsDataFrame is returned
+# Now get elevation of points, a SpatialPointsDataFrame is returned, turn that to a dataframe
+# and add distance, in kiLometres, from location of interest.
 elevations <- elevatr::get_elev_point(points, prj = wgs.84 ,src = "aws")
-elevations
+elevations_df <- as.data.frame(elevations)
+elevations_df <- cbind(elevations_df, "distance" = (as.numeric(row.names(elevations_df)) - 1) * 0.06792829)
+
+# Now plot the elevation profile from location of interest to coast
+ggplot(elevations_df) +
+  geom_line(aes(x = distance, y = elevation)) +
+  scale_x_continuous(name = "Distance (km)") +
+  scale_y_continuous(name = "Elevation (m)") +
+  ggtitle("Elevation Profile") +
+  theme_bw()
+
+# For each point calculate the absolute elevation distance from point a to point b
+first_elevation <- elevations_df[1,1]
+elevations_df <- cbind(elevations_df, "next_elevation" = c(first_elevation, head(elevations_df$elevation, -1)))
+elevations_df
+
