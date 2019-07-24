@@ -9,16 +9,26 @@ library(geosphere)
 library(elevatr)
 library(rgbif)
 library(sp)
+library(rlist)
 
 # Set up projections - IMPORTANT - confirm the regions for projections are correct 3577 covers all of Australia
 #epsg.3577 <- "+proj=aea +lat_1=-18 +lat_2=-36 +lat_0=0 +lon_0=132 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=km +no_defs"
 #wgs.84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 wgs.84 <- get_proj4("WGS84", output = "character")
+location <- "Uluru"
+loc_file <- paste0(location,".Rds")
 
 # Use geocode_OSM (Open Street Maps) to get co-oridinates of Uluru
-loc <- geocode_OSM("Uluru", projection = wgs.84)
-longitude <- loc$coords["x"]
-latitude <- loc$coords["y"]
+if (file.exists(loc_file)) {
+  loc_df <- readRDS(loc_file)
+  } else {
+  loc <- geocode_OSM(location, projection = wgs.84)
+  loc_df <- as.data.frame(loc$coords)
+  saveRDS(loc_df, file = loc_file)
+  }
+
+longitude <- loc_df["x",]
+latitude <- loc_df["y",]
 
 loc_txt <- paste("POINT(",longitude," ",latitude,")")
 loc_wkt <- readWKT(loc_txt, p4s = CRS(wgs.84))
