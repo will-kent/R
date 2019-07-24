@@ -37,10 +37,13 @@ df <- elevatr::get_elev_point(loc_wkt, src = "aws")
 df
 
 # Download coastlines file from natural earth data and unzip
-download.file("http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/physical/ne_10m_coastline.zip", 
-              destfile = 'coastlines.zip')
+coastline_file <- "coastlines.zip"
+if (!file.exists(coastline_file)) {
+  download.file("http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/physical/ne_10m_coastline.zip", 
+              destfile = coastline_file)
+  }
 
-unzip(zipfile = "coastlines.zip", 
+unzip(zipfile = coastline_file, 
       exdir = 'ne-coastlines-10m')
 
 coast <- readOGR("ne-coastlines-10m/ne_10m_coastline.shp", p4s = wgs.84)
