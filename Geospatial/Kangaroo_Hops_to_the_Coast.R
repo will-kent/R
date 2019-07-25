@@ -75,6 +75,9 @@ spdf <- spsample(x = sp_line, n = pts_2_sample, type = "regular")
 points <- as.data.frame(spdf)
 points <- as.data.frame(rbind(xy[1,], points, xy[2,]))
 
+# Get the distance between sample points
+dist_bw_pts <- dist_line[1] / (pts_2_sample + 1)
+
 # Plot on map with line from location of interest to the coast
 ggplot() +
   geom_path(data = coast, aes(x = long, y = lat, group = group)) +
@@ -83,16 +86,16 @@ ggplot() +
   scale_x_continuous(limits = c(110, 155)) +
   scale_y_continuous(limits = c(-45, -5)) +
   coord_fixed()
-
+  
 # Now get elevation of points, a SpatialPointsDataFrame is returned, turn that to a dataframe
 # and add distance, in kiLometres, from location of interest.
 elevations <- elevatr::get_elev_point(points, prj = wgs.84 ,src = "aws")
 elevations_df <- as.data.frame(elevations)
-elevations_df <- cbind(elevations_df, "distance" = (as.numeric(row.names(elevations_df)) - 1) * 0.06792829)
+elevations_df <- cbind(elevations_df, "distance" = (as.numeric(row.names(elevations_df)) - 1) * dist_bw_pts)
 
 # Now plot the elevation profile from location of interest to coast
 ggplot(elevations_df) +
-  geom_line(aes(x = distance, y = elevation)) +
+  geom_line(aes(x = (distance/1000), y = elevation)) +
   scale_x_continuous(name = "Distance (km)") +
   scale_y_continuous(name = "Elevation (m)") +
   ggtitle("Elevation Profile") +
@@ -101,5 +104,7 @@ ggplot(elevations_df) +
 # For each point calculate the absolute elevation distance from point a to point b
 first_elevation <- elevations_df[1,1]
 elevations_df <- cbind(elevations_df, "next_elevation" = c(first_elevation, head(elevations_df$elevation, -1)))
-elevations_df
+elevations_df <- cbind(elevations_df, "elevation_diff" = abs(elevations_df$elevation - elevations_df$next_elevation))
 
+sum(sqrt(dist_bw_pts^2 + elevations_df$elevation_diff^2))
+# a2 + b2 = c2
