@@ -26,9 +26,4 @@ json_location <- c[["outputs"]][["json"]]
 download.file(json_location,paste0("json_data.json"))
 
 
-aoi <- c(152.95, -27.55, 153.07, -27.45)
-?get_slga_data
-bne_surface_clay <- slga:::get_slga_data(url = soil_url)
 
-getAnywhere(make_soils_url)
-soil_url <- slga:::make_soils_url(product = 'NAT', attribute = 'CLY', component = 'CLO', depth = 1, aoi = aoi)
