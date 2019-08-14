@@ -26,4 +26,19 @@ json_location <- c[["outputs"]][["json"]]
 download.file(json_location,paste0("json_data.json"))
 
 
+library("MODIS")
+library(rgdal)
+
+getProduct()
+getProduct("MOD09GQ")
+# 152.691, -30.99, 152.693, -30.98
+boundary <- raster(xmn = 152.691, xmx = 152.693, ymn = -30.99, ymx = -30.98)
+tile <- getTile(boundary)
+tile
+hTile <- tile@tileH
+vTile <- tile@tileV
+a <- getHdf("MOD09GQ", begin = "2019.08.01", tileH = 31, tileV = 12, checkIntegrity = FALSE)
+
+
+
 
