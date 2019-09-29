@@ -1,0 +1,410 @@
+---
+title: "Spatial Analysis of Unemployment in Greater Sydney using Geographically Weighted Regression"
+output: bookdown::html_document2
+fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, error = FALSE)
+```
+
+```{r libraries}
+library(tidyverse)
+library(rgdal)
+library(sp)
+library(sf)
+library(spdep)
+library(rgeos)
+library(rgdal)
+library(gridExtra)
+library(grid)
+library(tmap)
+library(spgwr)
+```
+
+```{r data}
+
+setwd("C:/Users/will.kent/source/repos/R/Geospatial/GWR")
+
+# Data Collection
+sa2_shape <- st_read("./Data/SA2_Shapefile/SA2_2016_AUST.shp", quiet = TRUE, stringsAsFactors = FALSE)
+employed <- read_csv("./Data/Employed_SA2.csv")
+edu <- read_csv("./Data/Education_SA2.csv")
+place_of_birth <- read_csv("./Data/Place_Of_Birth_SA2.csv")
+demographics <- read_csv("./Data/Population.csv")
+demographics <- demographics %>% 
+  select(SA2_CODE = ASGS_2016
+         ,TOTAL_POP = Value)
+
+# Load model data
+data_set <- sa2_shape %>% 
+  mutate(SA2_MAINCODE_2016 = as.numeric(SA2_MAIN16)) %>% 
+  left_join(demographics, by = c("SA2_MAINCODE_2016" = "SA2_CODE")) %>% 
+  left_join(employed, by = c("SA2_MAINCODE_2016" = "SA2_CODE")) %>% 
+  left_join(place_of_birth, by = c("SA2_MAINCODE_2016" = "SA2_CODE")) %>% 
+  left_join(edu, by = c("SA2_MAINCODE_2016" = "SA2_CODE")) %>% 
+  filter(GCC_NAME16 == "Greater Sydney",
+         !is.na(st_dimension(sa2_shape$geometry))) %>% 
+  mutate(EDU_ALL = EDU_CERT_ALL + EDU_POSTGRAD + EDU_BACHELOR + EDU_DIPLOMA) %>% 
+  dplyr::select(SA2_CODE = SA2_MAIN16
+        ,SA2_NAME = SA2_NAME16
+        ,STATE_NAME = STE_NAME16
+        ,GCC_NAME = GCC_NAME16
+        ,EDU_ALL
+        ,BORN_OVERSEAS
+        ,TOTAL_POP
+        ,LAB_FORCE
+        ,UNEMPLOYED
+        ,geometry)
+
+# Need to deal with SA2's with low population figures - mean of surrounding areas
+new_data <- data_set %>% 
+  filter(TOTAL_POP < 500) %>% 
+  st_join(data_set, join = st_touches) %>%
+  group_by(SA2_CODE.x) %>% 
+  summarise(CALC_UNEMPLOYED = as.integer(round((sum(UNEMPLOYED.y) / sum(LAB_FORCE.y))*5000, 2)),
+            CALC_EDU_ALL = as.integer(round((sum(EDU_ALL.y) / sum(TOTAL_POP.y))*5000, 2)),
+            CALC_BORN_OVERSEAS = as.integer(round((sum(BORN_OVERSEAS.y) / sum(TOTAL_POP.y))*5000, 2)),
+            CALC_LAB_FORCE = 5000
+            ) %>% 
+  as_tibble() %>% 
+  dplyr::select(SA2_CODE = SA2_CODE.x
+         ,CALC_UNEMPLOYED
+         ,CALC_BORN_OVERSEAS
+         ,CALC_LAB_FORCE
+         ,CALC_EDU_ALL
+         )
+
+# Create new data set with combined "updated" SA2's
+combined_df <- data_set %>% 
+  left_join(new_data, by = c("SA2_CODE")) %>% 
+  mutate(BORN_OVERSEAS = coalesce(CALC_BORN_OVERSEAS, as.integer(BORN_OVERSEAS)),
+         EDU_ALL_TERT = coalesce(CALC_EDU_ALL,as.integer(EDU_ALL)),
+         UNEMPLOYED = coalesce(CALC_UNEMPLOYED, as.integer(UNEMPLOYED)),
+         LAB_FORCE = coalesce(CALC_LAB_FORCE, LAB_FORCE),
+         UNEMPLOYMENT_RATE = (UNEMPLOYED / LAB_FORCE)*100,
+         PERC_BORN_OS = BORN_OVERSEAS / ifelse(is.na(CALC_LAB_FORCE), TOTAL_POP, CALC_LAB_FORCE),
+         PERC_EDU_ALL = EDU_ALL_TERT / ifelse(is.na(CALC_LAB_FORCE), TOTAL_POP, CALC_LAB_FORCE)) %>%
+  dplyr::select(SA2_CODE
+                ,SA2_NAME
+                ,STATE_NAME
+                ,GCC_NAME
+                ,BORN_OVERSEAS
+                ,UNEMPLOYED
+                ,LAB_FORCE
+                ,TOTAL_POP
+                ,UNEMPLOYMENT_RATE
+                ,PERC_BORN_OS
+                ,PERC_EDU_ALL)
+```
+## Background {-#background}
+
+As part of Assessment Task 2 (AT2) our group analysed unemployment in New South Wales (NSW). During initial investigations the spatial nature of the data was observed and resulted in discussion about how to model this effect. To account for the observed spatial differences several features were engineered to improve performance of the final model. These spatial features were prominent in the final model which indicates that unemployment is not constant across space. A model better able to account for the relationship between unemployment rate and space may aid our understanding.  
+
+The analysis here will examine the geographic variation of unemployment in the Greater Sydney area using data from the 2016 Census. Focus on Greater Sydney, rather than NSW, has been chosen as AT2 showed urban and rural areas exhibited different spatial characteristics. Analysing both may present challenges for interpretation. The Australian Bureau of Statistics (ABS) definition of Greater Sydney includes the Blue Mountains to Sydney's west and the Gosford region to the north.
+
+## Introduction {-#Introduction}
+
+The unemployment rate is a common metric used to aid understanding of labour market conditions and a key indicator of the state of an economy (Reserve Bank of Australia, (n.d.)). When the unemployment rate rises national production and consumer spending both decrease (US Bureau of Labor Statistics, 2015). Understanding the factors that affect the unemployment rate influences policy decision-making.
+
+On an individual level unemployment has been shown to have a detrimental impact on physical and mental health (Linn et al., 1985, Mathers and Schofield, 1998). An individual's employment status also has wider ramifications on immediate family and the local community. Families where neither parent works are less likely to obtain secure housing in areas accessible to jobs and are more likely to experience poverty and financial hardship (McClelland, 2000). Children living in a jobless family are more likely to exhibit behavioural and emotional problems (Gray et al., 2011).
+
+In December 2018 the unemployment rate for Australia was 5.0% (Australian Bureau of Statistics, 2019). Within this figure there are stark differences between geographical regions. In the Greater Sydney area alone the unemployment rate varies from 1.1% in the Sydney Central Business District (CBD) to 18.7% in Fairfield in Sydney's west (Department of Employment, Skills, Small and Family Business, 2019). Spatial autocorrelation has been observed in studies of unemployment in major Australian cities (Trendle, 2006, Vipond, 1984). In Australia these spatial disparities have also been observed in broader socio-economic disadvantage metrics (Hugo, 2002).
+
+With many statistical techniques, variables are assumed to be constant between locations. Geographically weighted regression (GWR) attempts to capture spatial variation and allows different relationships to exist at different locations (Brunsdon et al., 1996). GWR has been used in previous studies to confirm the nonstationarity of unemployment (Lewandowska-Gwarcda, 2018). This has allowed for more detailed conclusions to be made about the local determinants of unemployment. This analysis aims to understand the spatial nature of unemployment in Greater Sydney as well as how the predictors of born overseas and tertiary qualification change based on geographic location.
+
+## Data {-#data}
+
+The data used in this analysis originates from the 2016 Census of Australia. Unemployment rate is calculated based on information provided in the census. Analysis will be conducted based on Statistical Area Level 2 (SA2) boundaries. An SA2 is a construct of the ABS and designed to reflect areas that interact socially and economically. The average population of an SA2 is 10,000 although they range from 3,000 to 25,000 people (Australian Bureau of Statistics, 2018).
+
+The unemployment rate distributed across Greater Sydney SA2s is shown in Figure \@ref(fig:gsunemployment). This highlights the spatial nature of unemployment. Higher unemployment rates are observed in areas west and south-west of the CBD whilst lower rates of unemployment are observed in the Sutherland Shire to the south of the CBD and the Northern Beaches.
+
+
+```{r gsunemployment, fig.align = "center", fig.cap = "\\label{fig:figs}Greater Sydney unemployment rate by SA2"}
+
+combined_df %>% 
+  tm_shape() +
+  tm_fill("UNEMPLOYMENT_RATE", palette = "Reds", style = "quantile", title = "Unemployment Rate (%)") +
+  tm_borders(alpha = 0.4) +
+  tm_layout(legend.position = c("left","top"))
+```
+
+### Predictors {-#predictors}
+
+In this analysis the predictor of born overseas is measured as the proportion of the population in an area born overseas. Although this variable does not differentiate between the recency of when an individual migrated to Australia, nor citizenship or visa status, but it does give an indication of the ethnic background of an area.
+
+The predictor of tertiary qualification reflects the proportion of the population in an area that have attained a tertiary qualification. This includes certificate, bachelors and post-graduate levels of education. This variable provides information about the attainment of more specialist skills required for the workforce.  
+
+## Method {-#method}
+Initial analysis of the relationship between the predictors and unemployment rate across the Greater Sydney region will be examined through linear regression. This will provide a global model to evaluate how well the predictors explain unemployment rates across all locations.
+
+A Moran's I test will be conducted to evaluate whether spatial autocorrelation exists across Greater Sydney (Moran, 1950). In addition, a local Moran's I test will be conducted to identify local clusters and spatial outliers across the region (Anselin, 1995). In both these tests the weighting factor will only include neighbours that share a boundary containing two or more points.
+
+To aid understanding of local variations GWR will be used to observe spatial variability between the predictors and unemployment rate.
+
+For the GWR an adaptive Gaussian kernel will be used as SA2s in the Greater Sydney area vary dramatically in size. Using an adaptive kernel ensures the size of an area is accounted for with each SA2 being assigned the optimal proportion of neighbouring observations (Bidanset and Lombard, 2014).  
+
+## Results {-#results}
+### Exploratory Data Analysis {-#exploratory-data-analysis}
+
+Figure \@ref(fig:eda) shows the relationship between unemployment rate and the predictors. For the predictor born overseas there is a positive relationship with unemployment rate; as the proportion of individuals in an area born overseas increases so does unemployment. For the tertiary qualification predictor there is a negative relationship with unemployment rate; the higher the percent of individuals with a tertiary qualification the lower the unemployment rate.
+
+``` {r eda, fig.align = "center", fig.cap = "\\label{fig:figs}Unemployment rate by proportion of population born overseas (left) and proportion of population with a tertiary qualification (right)"}
+perc_os <- ggplot(combined_df, aes(x = PERC_BORN_OS, y = UNEMPLOYMENT_RATE/100)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y~x, se = FALSE) +
+  xlab("Born Overseas (%)") +
+  ylab("Unemployment Rate (%)") + 
+  scale_x_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_bw() +
+  theme(plot.margin = unit(c(0,1,0,0),"cm"))
+
+perc_home <- ggplot(combined_df, aes(x = PERC_EDU_ALL, y = UNEMPLOYMENT_RATE/100)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y~x, se = FALSE) +
+  xlab("Teritary Qualification (%)") +
+  ylab("Unemployment Rate (%)") + 
+  scale_x_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_bw() +
+  theme(plot.margin = unit(c(0,0,0,1),"cm"))
+
+grid.arrange(arrangeGrob(perc_os, bottom = textGrob("Percent of population born overseas", hjust = 0.5, gp = gpar(fontsize = 9))), arrangeGrob(perc_home, bottom = textGrob("Percent of population with a tertiary qualification", hjust = 0.5, gp = gpar(fontsize = 9))), ncol = 2)
+```
+
+The spatial distribution of the predictors is shown in Figure \@ref(fig:edamaps) and provides further evidence of the nonstationarity of the data. As can be seen there are areas in western Sydney where over 50% of the population were born overseas whilst the areas on the outer fringe of Greater Sydney have a much lower proportion of the population born overseas.
+
+The proportion of the population with a tertiary qualification shows the inverse distribution and again indicates the nonstationarity of the data.
+
+```{r edamaps, fig.align = "center", fig.cap = "\\label{fig:figs}Spatial distribution of the proportion of population born overseas (left) and proportion of population with a tertiary qualification (right)"}
+map_os <- combined_df %>% 
+  mutate(NEW_BORN_OS = PERC_BORN_OS * 100) %>% 
+  tm_shape() +
+  tm_fill("NEW_BORN_OS", palette = "Reds", style = "quantile", title = "Born Overseas (%)") +
+  tm_borders(alpha = 0.4) +
+  tm_layout(legend.position = c("left","top"))
+
+map_home <- combined_df %>% 
+  mutate(NEW_PERC_EDU_ALL = PERC_EDU_ALL * 100) %>% 
+  tm_shape() +
+  tm_fill("NEW_PERC_EDU_ALL", palette = "Reds", style = "quantile", title = "Tertiary Qualification (%)") +
+  tm_borders(alpha = 0.4) +
+  tm_layout(legend.position = c("left","top"))
+
+tmap_arrange(map_os, map_home)
+#grid.arrange(arrangeGrob(map_os, bottom = textGrob("(a) Population born overseas", gp = gpar(fontsize = 9))), arrangeGrob(map_home, bottom = textGrob("(b) Population with a tertiary qualification", gp = gpar(fontsize = 9))), ncol = 2)
+```
+
+### Linear Regression {-#linear-regression}
+
+Table 1 shows the results of the linear regression. The two predictors are statistically important in the model.
+
+As expected, the born overseas predictor increases unemployment rate. For every 1% increase in the population born overseas the unemployment rate increases 0.03%.
+
+The tertiary education predictor has a negative impact on unemployment rate. For every 1% increase in the population with a tertiary qualification the unemployment rate decreases 0.22%. This indicates that the successful completion of post-high school education improves employment prospects.
+
+```{r tab, results = "asis"} 
+
+tab <- "
+| Variable                  | Coefficient   | SE    | _p_ > t |
+| -------------             |:-------------:|:-----:|:------: |
+| % Born Overseas           | 0.030         | 0.007 | < 0.001 |
+| % with Tertiary Education | -0.219        | 0.011 | < 0.001 |
+| Intercept                 | 0.172         | 0.007 | < 0.001 |
+| R<sup>2</sup> = 0.69      |               |       |         |
+"
+
+cat(tab)
+```
+
+**Table 1**: Linear regression of unemployment rate
+
+In further evidence of the nonstationarity of the data analysis of the residuals from the linear model, Figure \@ref(fig:resids), shows areas with similar residuals are clustered together. Areas that differ a similar amount from the predicted value appear to be geographically related. 
+
+```{r resids, fig.align = "center", fig.cap = "\\label{fig:figs}Spatial distribution of linear model residuals"}
+# First take a basic linear model from AT2 - using two important parameters
+lm_model <- lm(UNEMPLOYMENT_RATE/100 ~ PERC_BORN_OS + PERC_EDU_ALL, data = combined_df)
+
+# Plots looking OK but we'll move on
+lm_residuals <- residuals(lm_model)
+map_residuals <- cbind(combined_df, lm_residuals)
+
+map_residuals %>% 
+  tm_shape() + 
+  tm_fill(col = "lm_residuals", style = "quantile", title = "Residual")
+```
+
+### Moran's I Test {-#morans-i-test}
+```{r moran}
+neighbours <- poly2nb(combined_df, queen = FALSE)
+
+sp_weights <- nb2listw(neighbours)
+```
+
+The results from the Moran's I test, Table 2, show a positive Moran I statistic and a significant _p_-value. These results confirm there is positive spatial autocorrelation across the Greater Sydney region. Areas that have similar unemployment rates are clustered together. 
+
+```{r tab2, results = "asis"} 
+
+tab2 <- "
+| Metric                    | Value         |
+| -------------             |:-------------:|
+| Moran I statistic         | 0.6437        |
+| p-value                   | < 0.001       |
+"
+
+cat(tab2)
+```
+
+**Table 2**: Moran's I test results
+
+The Moran's plot, Figure \@ref(fig:moranplot), shows the relationship between SA2s and their neighbours and visualises Moran's I statistic. The points in the top-right quadrant of the plot represent areas of high unemployment with high unemployment neighbours whilst the bottom-left quadrant is low unemployment areas with low unemployment neighbours.
+
+``` {r moranplot, fig.align = "center", fig.cap = "\\label{fig:figs}Moran's plot shows areas of low unemployment are clustered with low unemployment neighbours (bottom left quadrant), whilst areas of high unemployment are clustered with high unemployment neighbours (top right quadrant)"}
+# The p-value is low and I statistic is positive (i.e. correlated). So SA2 seems to be somewhat correlated.
+# Local test for auto-correlation - Shows high unemployment areas have high unemployment neighbours whilst low unemployment areas have low unemployment neighbours
+moran_plot <- moran.plot(combined_df$UNEMPLOYMENT_RATE, listw = sp_weights, xlab = "Unemployment Rate (%)", ylab = "Spatially Lagged Unemployment Rate")
+```
+
+### Local Moran's I Test {-#local-morans-i-test}
+
+The local variance of spatial autocorrelation is calculated using the local Moran's I test. The local Moran's I is highest in west and south-west Sydney, the Sutherland Shire and Northern Beaches (Figure \@ref(fig:localmoran)). In these regions, SA2s, and their neighbours, have similar levels of unemployment. The _p_-values show a similar distribution confirming, for these regions, location is important.
+
+```{r localmoran, fig.align = "center", fig.cap = "\\label{fig:figs}Spatial distribution of local Moran's I statistic (left) and _p_-value (right)"}
+# There are a few outliers - test and plot
+local_moran <- localmoran(combined_df$UNEMPLOYMENT_RATE, listw = sp_weights)
+
+# Add output to the combined_df dataframe
+moran_map <- cbind(combined_df, local_moran)
+
+# And plot Moran statistic values
+local_m <- moran_map %>% 
+  tm_shape() +
+  tm_fill(col = "Ii", style = "quantile", title = "Local Moran's I")
+
+# And plot p values - Light areas in the map below show that there are areas where location is very important
+local_p <- moran_map %>% 
+  tm_shape() +
+  tm_fill("Pr.z...0.", style = "fixed", breaks=c(0.00,0.01,0.05,0.1,0.2,1), title = "p-values")
+
+tmap_arrange(local_m, local_p)
+```
+
+### Geographically Weighted Regression {-#geographically-weighted-regression}
+
+Table 3 shows the mean, median, lower quartile and upper quartile of the predictors from the GWR. Although not strictly the same the adjusted R<sup>2</sup> has increased from 0.69 to 0.94. The results show the disparity between areas and that the independent variables have a differing impact dependent on location.
+
+``` {r tab3, results = "asis"}
+
+tab3 <- "
+| Variable                   | Mean      | Median   | Lower Quartile | Upper Quartile  |
+| -------------              |:---------:|:--------:|:--------------:|:---------------:|
+| % Born Overseas            | 0.076     | 0.086    | 0.044          | 0.116           |
+| % with Tertiary Education  | -0.174    | -0.174   | -0.264         | -0.084          |
+| Intercept                  | 0.123     | 0.121    | 0.057          | 0.182           |
+| Quasi R<sup>2</sup> = 0.94 |           |          |                |                 |
+"
+
+cat(tab3)
+```
+
+Figure \@ref(fig:gwrr2) shows local R<sup>2</sup> values. GWR provides a good fit within more central areas but performs less well in the Gosford region, which may be a result of its relative remoteness from Sydney, and for a small pocket near Castle Hill to the north-west of the city where the urban sprawl is rapidly expanding. 
+
+```{r gwrr2, results = FALSE, fig.align = "center", fig.cap = "\\label{fig:figs}Local R<sup>2</sup> values by SA2"}
+spatial_df <- as(combined_df, "Spatial")
+gwr_kernel <- gwr.sel(UNEMPLOYMENT_RATE/100 ~ PERC_BORN_OS + PERC_EDU_ALL, data = spatial_df, adapt = TRUE)
+
+# Create the GWR model
+gwr_model <- gwr(UNEMPLOYMENT_RATE/100 ~ PERC_BORN_OS + PERC_EDU_ALL, data = spatial_df, adapt = gwr_kernel, hatmatrix = TRUE, se.fit = TRUE)
+
+gwr_results <- as.data.frame(gwr_model$SDF)
+
+gwr_map <- cbind(combined_df, as.matrix(gwr_results))
+
+# Map the R2
+gwr_map %>% 
+  tm_shape() +
+  tm_fill(col = "localR2", style = "fixed", breaks=c(0.5,0.6,0.7,0.8,0.9,1), title = "Local R2") +
+  tm_borders(alpha = 0.4)
+```
+
+Figure \@ref(fig:gwrcoeff) shows being born overseas has little impact on unemployment rates on the urban fringe whilst for more urban areas it has more of an impact.
+
+For the tertiary qualification predictor, the results show an interesting pattern. In the west and south-west of Sydney increasing the proportion of the population with a tertiary qualification by 1% reduces the unemployment rate by up to 0.45% whilst in the inner west and upper north shore improving tertiary qualification rates has little to no impact on unemployment rates.    
+
+
+```{r gwrcoeff, fig.align = "center", fig.cap = "\\label{fig:figs} Local coefficients for proportion of population born overseas (left) and proportion of population with a tertiary qualification (right)"}
+born_os_coeff <- gwr_map %>% 
+  tm_shape() +
+  tm_fill(col = "PERC_BORN_OS.1", style = "quantile", title = "Born Overseas coefficient") +
+  tm_borders(alpha = 0.4)
+
+edu_coeff <- gwr_map %>% 
+  tm_shape() +
+  tm_fill(col = "PERC_EDU_ALL.1", style = "quantile", title = "Tertiary Qualification coefficient") +
+  tm_borders(alpha = 0.4)
+
+tmap_arrange(born_os_coeff, edu_coeff, asp = 0)
+```
+
+## Conclusion {-#conclusion}
+
+In this analysis it has been demonstrated that location is important to understanding unemployment within the Greater Sydney region. Using GWR almost 95% of variation in unemployment rate can be explained by the predictors born overseas and tertiary qualification. The model performs best in the more densely populated areas of Greater Sydney; the model is less successful around Gosford and in areas that border more rural areas close to the expanding fringes of Sydney city.
+
+In Sydney physical accessibility to work is an important determinant of unemployment with those living near dense employment opportunities more likely to be employed (Vipond, 1984). Within the Greater Sydney region there are four major employment hubs geographically located east (Sydney CBD), central (Parramatta) and north (North Sydney and Macquarie Park) (PWC, 2015). Unsurprisingly populations living in the south-west of Sydney city, furthest from the four major hubs, have the highest unemployment rates.
+
+The relatively low levels of unemployment exhibited in the Sutherland Shire on Sydney's southern fringe and the Northern Beaches, where access to public transport is limited, may appear to reject the notion that physical accessibility to work is a determinant of unemployment. It has been theorised that in urban environments individuals will seek to balance the cost of commuting against the advantages of more space for living (Alonso, 1960). Although income analysis in these regions is not included here it is hypothesised that with the proximity of these regions to beaches and national parks, they are more affluent and individuals in these areas are able to balance the cost of commuting with the advantages of more living space.
+
+The impact of the predictors was shown to differ across space. An increase in the proportion of the population with a tertiary qualification was shown to have a greater impact on reducing unemployment in high unemployment areas than in low unemployment areas. The effect of being born overseas on employment was reduced on the fringes of Sydney
+
+This post has demonstrated that the predictors do differ between locations within the Greater Sydney region and that the use of GWR provides additional insights into the nature of unemployment not adequately accounted for in the original linear regression.  
+
+## Reflection {-#reflection}
+
+From early on in AT2 there were questions around the spatial nature of unemployment. Does a migrant living in eastern Sydney have a different employment outlook to one living in in western Sydney? Is a young person living near the coast more likely to be employed than one living further west? Does access to public transport have an impact? The group attempted to quantify the relationships we hypothesised, and observed, through additional features. These attempts meet with a measure of success. The use of GWR has shown that the effects of the predictors changes over space meaning different actions may be required in different locations to lower unemployment. This insight will help policy decision-makers help unemployed individuals with local solutions.
+
+The use of GWR has made isolating pockets of geographical interest easier and helped raise new questions. Why does unemployment differ between the Sutherland Shire and the south-west of Sydney when they are comparable distances from major employment hubs? What could cause a tertiary qualification to be more beneficial in south-west Sydney? Are amongst the many questions I had whilst analysing the new insights.
+
+The use of maps to visualise information aided investigation and analysis. Studies have shown humans innately support map-like spatial codes (Epstein et al., 2017). Information presented on maps tap into this and makes interpretation and understanding of results easier and quicker. This has enhanced the insights gained through AT2 to be more relevant to those conducting the analysis and, hopefully, for those receiving the information.
+
+## References {-#references}
+
+ALONSO, W. 1960. A Theory of the Urban Land Market _Papers and Proceedings of the Regional Science Association_, 6, 149-157.
+
+ANSELIN, A. 1995. Local Indicators of Spatial Association - LISA. _Geographical Analysis_, 27, 93-115.
+
+AUSTRALIAN BUREAU OF STATISTICS. 2018. _Australian Statistical Geography Standard (ASGS)_ [Online]. Available: <https://www.abs.gov.au/websitedbs/D3310114.nsf/home/Australian+Statistical+Geography+Standard+(ASGS)> [Accessed 9 June 2019].
+
+AUSTRALIAN BUREAU OF STATISTICS. 2019. _6202.0 - Labour Force, Australia, Dec 2018_ [Online]. 24 January 2019. Available: <https://www.abs.gov.au/AUSSTATS/abs@.nsf/Previousproducts/6202.0Main%20Features2Dec%202018?opendocument&tabname=Summary&prodno=6202.0&issue=Dec%202018&num=&view=> [Accessed 9 June 2019].
+
+BIDANSET, P. E. & LOMBARD, J. R. 2014. The Effect of Kernel and Bandwidth Specification in Geographically Weighted Regression Models on the Accuracy and Uniformity of Mass Real Estate Appraisal. _Journal of Property Tax Assessment and Administration_, 10, 5-14.
+
+BRUNSDON, C., FOTHERINGHAM, A. S. & CHARLTON, M. E. 1996. Geographically Weighted Regression: A Method for Exploring Spatial Nonstationarity. _Geographical Analysis_, 28, 281-298.
+
+DEPARTMENT OF EMPLOYMENT, SKILLS, SMALL AND FAMILY BUSINESS 2019. _SA2 Data tables - Small Area Labour Markets - December quarter 2018_ [Online]. Available: <https://docs.employment.gov.au/documents/sa2-data-tables-small-area-labour-markets-december-quarter-2018> [Accessed 9 June 2019].
+
+EPSTEIN, R. A., PATAI, E. Z., JULIAN, J. B. & SPIERS, H. J. 2017. The Cognitive Map in Humans: Spatial Navigation and Beyond. _Nature Neuroscience_, 20, 1504-1513.
+
+GRAY, M., TAYLOR, M. & EDWARDS, B. 2011. Unemployment and the Wellbeing of Children Aged 5-10 Years. _Australian Journal of Labour Economics_, 14, 153-172.
+
+HUGO, G. 2002. Changing Patterns of Population Distribution in Australia. _Journal of Population Research_, 1-21.
+
+LEWANDOWSKA-GWARDA, K. 2018. Geographically Weighted Regression in the Analysis of Unemployment in Poland. _International Journal of Geo-Information_, 7.
+
+LINN, M. W., SANDIFER, R. & STEIN, S. 1985. Effects of Unemployment on Mental and Physical Health. _American Journal of Public Health_, 75, 502-506.
+
+MATHERS, C. D. & SCHOFIELD, D. J. 1998. The Health Consequences of Unemployment: The Evidence. _Medical Journal of Australia_ 168, 178-182.
+
+MCCLELLAND, A. 2000. Effects of Unemployment on the Family. _Economic and Labour Relations Review_, 11, 198-212.
+
+MORAN, P. A. P. 1950. Notes on Continuous Stochastic Phenomena. _Biometrika_, 37, 17-23.
+
+PWC, 2015. _Big City Analytics: Identifying Sydney's Economic Employment and Population Centres of Gravity_ [Online] Available: <https://www.pwc.com.au/consulting/assets/publications/big-city-analytics-apr15.pdf> [Accessed 12 June 2019].
+
+RESERVE BANK OF AUSTRALIA. (n.d.). _Unemployment: Its Measurement and Types_ [Online]. Available: <https://www.rba.gov.au/education/resources/explainers/unemployment-its-measurement-and-types.html> [Accessed 9 June 2019].
+
+TRENDLE, B. 2006. Unemployment Variation in Metropolitan Brisbane - The Role of Geographic Location and Demographic Characteristics. _Australasian Journal of Regional Studies_, 12, 217-232.
+
+US BUREAU OF LABOR STATISTICS. 2015. _How the Government Measures Unemployment_ [Online]. Available: <https://www.bls.gov/cps/cps_htgm.htm> [Accessed 9 June 2019].
+
+VIPOND, J. 1984. The Intra-Urban Unemployment Gradient: The Influence of Location on Unemployment. _Urban Studies_, 21, 377-388.

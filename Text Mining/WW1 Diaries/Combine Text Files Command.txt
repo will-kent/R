@@ -1,0 +1,1 @@
+for %f in (Pte_Wilson*.txt) do type "%f" >> Pte_Wilson_1916_Diary.txt
