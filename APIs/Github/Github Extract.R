@@ -4,7 +4,7 @@ library(httr)
 library(tidyverse)
 
 # Config Variables to loop over pages - add more as required
-pages <- c(1,2,3)
+pages <- c(1,2,3,4)
 
 # Remove dataframe
 if (exists("git_df")){
@@ -48,3 +48,5 @@ for(page in pages){
   # Convert to a data.frame
   git_df <- rbind(page_df,if(exists("git_df")) git_df)
 }
+
+git_df
