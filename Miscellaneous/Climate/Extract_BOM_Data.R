@@ -1,6 +1,4 @@
 library(bomrang)
-library(tidyverse)
-library(rgeos)
 
 #getwd()
 #setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
@@ -57,13 +55,3 @@ getClimateData <- function(longitude, latitude, measurement) {
   return(data)
   
 }
-
-
-lat <- -31.2
-long <- 151.2
-type <- "rain"
-
-df <- getClimateData(long, lat, type)
-class(df)
-df$product_code
-
