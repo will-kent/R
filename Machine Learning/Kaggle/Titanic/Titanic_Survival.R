@@ -2,7 +2,7 @@ library(tidyverse)
 
 # Check working directory set correctly
 #getwd()
-#setwd("C:\\Users\\will.kent\\source\\repos\\R\\Machine Learning\\Kaggle\\Titanic")
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 # Read csv's
 train <- read.csv(".\\Data\\train.csv")
@@ -14,6 +14,7 @@ test_union$Survived <- -1
 
 all <- union(train, test_union)
 all
+
 ##################
 # Data Wrangling #
 ##################
