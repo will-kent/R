@@ -1,14 +1,9 @@
 library(tmaptools) # for geocode_OSM
 library(rgeos) # for readWKT
-#library(maptools)
-#library(sf)
 library(rgdal) # for CRS
-library(raster)
 library(ggplot2)
 library(geosphere)
 library(elevatr)
-library(rgbif)
-library(sp)
 
 # Define parameters
 # 1. Location of interest, 2. Number of points to sample
@@ -19,7 +14,7 @@ pts_2_sample <- 10000
 # We'll stick with WGS84 projections for this project
 wgs.84 <- get_proj4("WGS84", output = "character")
 
-# Create file name to save location information to to reduce number of calls to the web
+# Create file name to save location information to reduce number of calls to the web
 loc_file <- paste0(location,".Rds")
 
 # If location information previously received use existing info else use geocode_OSM
@@ -39,7 +34,8 @@ loc_txt <- paste("POINT(",longitude," ",latitude,")")
 loc_wkt <- readWKT(loc_txt, p4s = CRS(wgs.84))
 
 # Check elevation of location of interest - does it look right?
-elevatr::get_elev_point(loc_wkt, src = "aws")
+uluru_alt <- elevatr::get_elev_point(loc_wkt, src = "aws")
+uluru_alt$elevation
 
 # If it hasn't already been downloaded get coastlines file from natural earth data
 coastline_file <- "coastlines.zip"
@@ -106,5 +102,6 @@ first_elevation <- elevations_df[1,1]
 elevations_df <- cbind(elevations_df, "next_elevation" = c(first_elevation, head(elevations_df$elevation, -1)))
 elevations_df <- cbind(elevations_df, "elevation_diff" = abs(elevations_df$elevation - elevations_df$next_elevation))
 
-sum(sqrt(dist_bw_pts^2 + elevations_df$elevation_diff^2))
 # a2 + b2 = c2
+distance <- sum(sqrt(dist_bw_pts^2 + elevations_df$elevation_diff^2))
+distance
