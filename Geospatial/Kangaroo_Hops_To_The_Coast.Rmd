@@ -1,5 +1,5 @@
 ---
-title: "Kangaroo hops from Uluru to the Sea?"
+title: "Kangaroo hops from Uluru to the Sea"
 output: bookdown::html_document2
 fig_caption: yes
 ---
@@ -15,7 +15,7 @@ library(elevatr)
 ```
 
 ## Introduction {-#Introduction}
-In a previous post I looked at [how far Uluru is from the sea](http://rpubs.com/will-kent/uluru-to-the-sea). In that analysis it was found Uluru is 679.35 kilometres from the sea and that the closest point on the coast is in South Australian at the head of the Great Australian Bight. That original calculation was based on the _"as the crow flies"_ distance which is great, if you're a crow, but this doesn't help us land based mammals to determine the distance we'd have to travel to get to the coast from Uluru. This post will look at calculating how far a kangaroo would have to hop from Uluru to the sea.
+In a previous post I looked at [how far Uluru is from the sea](http://rpubs.com/will-kent/uluru-to-the-sea). In that analysis it was found Uluru is 679.35 kilometres from the sea and that the closest point on the coast is in South Australia at the head of the Great Australian Bight. That original calculation was based on the _"as the crow flies"_ distance which is great, if you're a crow, but this doesn't help us land based mammals to determine the distance we'd have to travel to get to the coast from Uluru. This post will look at calculating how far a kangaroo would have to hop from Uluru to the sea, using the programming language R.
 
 ``` {r crowflying, echo=FALSE, out.width='100%', fig.align = "center", fig.cap = "\\label{fig:figs}A crow flies above the undulations of the earth's surface but a kangaroo would have to navigate these mountains and valleys."}
 knitr::include_graphics("./images/crow_flies.png")
@@ -64,7 +64,7 @@ loc_wkt <- readWKT(loc_txt, p4s = CRS(wgs.84))
 
 ### Elevation {-#elevation}
 
-With the location of Uluru on the Earth's surface known how far above sea level Uluru is can be calculating using the `get_elev_point` function from the `elevatr` package. The `elevatr` package provides access to several web services that provide elevation data. The web service used for this project is the [Amazon Web Service Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) which provides a global dataset for bare-earth terrain heights. For Australia the elevation data is in a grid of either 5 metres for coastal regions or 90 metres for more remote regions.
+With the location of Uluru on the Earth's surface known how far above sea level Uluru is can be calculating using the `get_elev_point` function from the `elevatr` package. The `elevatr` package provides access to several web services that provide elevation data. The web service used for this project is the [Amazon Web Service Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) which provides a global dataset for bare-earth terrain heights. For Australia the elevation data is in a grid of either 5 metres for coastal regions or 90 metres for inland regions.
 
 ```{r uluruelevation, echo = TRUE, message = FALSE, warning = FALSE}
 uluru_alt <- elevatr::get_elev_point(loc_wkt, src = "aws")
@@ -75,7 +75,7 @@ The `get_elev_point` function accepts a point and returns the elevation. Uluru i
 ### The coast {-#the-coast}
 As in the previous post coastline data can be obtained from the <http://www.naturalearthdata.com> website. The downloaded zip file is unzipped and read using the `readOGR` function from the `rgdal` package.
 
-```{r downloadfile, echo = TRUE, message = FALSE, warning = FALSE, include = FALSE}
+```{r downloadfile, echo = TRUE, message = FALSE, warning = FALSE, results = 'hide'}
 download.file("http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/physical/ne_10m_coastline.zip", 
               destfile = 'coastlines.zip')
 
@@ -95,7 +95,7 @@ closest_longitude <- dist_line[2]
 closest_latitude <- dist_line[3]
 ```
 
-Unsurprisingly the distance from Uluru to the sea is `r round(dist_line[1]/1000,2)` kilometres, which is what was found previously. The other important output is the closest point on the coast to Uluru. Using the coordinates of Uluru, and the coordinates of the closest point on the coast, a SpatialLines object can be created to connect the two. This SpatialLines object will be important for calculating changes in elevation.
+Unsurprisingly the distance from Uluru to the sea is `r round(dist_line[1]/1000,2)` kilometres; this was found previously. The other important output is the closest point on the coast to Uluru. Using the coordinates of Uluru, and the coordinates of the closest point on the coast a line can be drawn between the two; a SpatialLines object is created to connect the two. This SpatialLines object will be important for calculating changes in elevation.
 
 ```{r createaline, echo = TRUE, message = FALSE, warning = FALSE}
 #Create a line between Uluru and the closest point on the coast and make a SpatialLines object
@@ -108,7 +108,7 @@ sp_line <- SpatialLines(list(Lines(Line(xy), ID = "a")))
 
 ## Kangaroo hops {-#kangaroo-hops}
 
-The `elevatr` package can calculate the elevation of a point. The line between Uluru and the coast is important as it can be broken up into many points. Using the `spsample` function from the `sp` package the line between Uluru and the coast can be split into many points along the route. In the below code snippet 10,000 points along the line are taken. As the code sets the type to "regular" the points are evenly spaced. This means we have 10,000 points all ~`r round(dist_line[1]/10000, 2)` metres apart along the line between Uluru and the coast.
+The `elevatr` package can calculate the elevation of a point. The line between Uluru and the coast can be broken up into many points. Using the `spsample` function from the `sp` package the line between Uluru and the coast can be split into many points along the route. In the below code snippet 10,000 points along the line are taken. As the code sets the type to "regular" the points are evenly spaced. This means we have 10,000 points all ~`r round(dist_line[1]/10000, 2)` metres apart along the line between Uluru and the coast.
 
 ```{r calcpoints, echo = TRUE, message = FALSE, warning = FALSE}
 pts_2_sample <- 10000
@@ -120,7 +120,7 @@ points <- as.data.frame(spdf)
 points <- as.data.frame(rbind(xy[1,], points, xy[2,]))
 ```
 
-The 10,000 points are stored in a data frame. This data frame can be passed to the `get_elev_points` function used previously to determine the elevation of each of the 10,000 points. The final step is to calculate the distance of each point from Uluru so as to be able to create an elevation profile.
+The 10,000 points are stored in a data frame. This data frame can be passed to the `get_elev_points` function, used previously, to determine the elevation of each of the 10,000 points. The final step is to calculate the distance of each point from Uluru so as to be able to create an elevation profile.
 
 ```{r elevationcalc, echo = TRUE, message = FALSE, warning = FALSE}
 # Get distance between points
@@ -135,7 +135,7 @@ elevations_df <- cbind(elevations_df, "distance" = (as.numeric(row.names(elevati
 
 ### Elevation profile {-#elevation-profile}
 
-With the points and elevations in a data frame an elevation profile can be produced to look at the changes that occur along the path from Uluru to the coast. Although the profile looks like there are significant peaks along the journey the initial rise of 300 metres in elevation occurs over almost 100 kilometres - hardly significant. The drop from almost 900 metres to the sea level occurs over 500 kilometres. 
+With the points and elevations in a data frame an elevation profile can be produced to look at the changes that occur along the path from Uluru to the coast. Although in the profile (Figure 3) it looks like there are significant peaks along the journey the initial rise of 300 metres in elevation occurs over almost 100 kilometres - hardly steep. The drop from almost 900 metres to the sea occurs over 500 kilometres. 
 
 ```{r plotelevation, echo = TRUE, message = FALSE, warning = FALSE, fig.width = 10, fig.cap = "\\label{fig:figs}The profile elevation from Uluru to the coast"}
 # Now plot the elevation profile from location of interest to coast
