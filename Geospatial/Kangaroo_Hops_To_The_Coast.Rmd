@@ -1,5 +1,5 @@
 ---
-title: "How far would a Kangaroo hop from Uluru to the Sea?"
+title: "Kangaroo hops from Uluru to the Sea?"
 output: bookdown::html_document2
 fig_caption: yes
 ---
@@ -15,7 +15,7 @@ library(elevatr)
 ```
 
 ## Introduction {-#Introduction}
-In a previous post I looked at [how far Uluru is from the sea](http://rpubs.com/will-kent/uluru-to-the-sea). In that analysis it was found Uluru is 679.35 kilometres from the sea and that the closest point on the coast is on the South Australian coast at the head of the Great Australian Bight. That original calculation was based on the _"as the crow flies"_ distance which is great, if you're a crow, but doesn't help us land based mammals to determine the distance we'd have to travel to get to the coast from Uluru. This post will look at determining how far a kangaroo would have to hop from Uluru to the sea.
+In a previous post I looked at [how far Uluru is from the sea](http://rpubs.com/will-kent/uluru-to-the-sea). In that analysis it was found Uluru is 679.35 kilometres from the sea and that the closest point on the coast is in South Australian at the head of the Great Australian Bight. That original calculation was based on the _"as the crow flies"_ distance which is great, if you're a crow, but this doesn't help us land based mammals to determine the distance we'd have to travel to get to the coast from Uluru. This post will look at calculating how far a kangaroo would have to hop from Uluru to the sea.
 
 ``` {r crowflying, echo=FALSE, out.width='100%', fig.align = "center", fig.cap = "\\label{fig:figs}A crow flies above the undulations of the earth's surface but a kangaroo would have to navigate these mountains and valleys."}
 knitr::include_graphics("./images/crow_flies.png")
@@ -28,13 +28,13 @@ Bear with me, this isn't a flat earth conspiracy. The Earth is often referred to
 knitr::include_graphics("./images/earth.png")
 ```
 
-The uneven surface of our planet creates obstacles that a land-based animal needs to navigate in order to reach a destination; they can't fly above it all. How could we calculate the distance to be travelled by land?
+The uneven surface of our planet creates obstacles that a land-based animal needs to navigate in order to reach it's destination; they can't fly above it all. How can the distance to be travelled, accounting for the obstacles, be calculated?
 
 ## Calculating distance {-#calculating-distance}
 
-Before calculating the distance, we'll set the starting location - Uluru - and the projection. A projection is the method by which a three-dimensional coordinate system is displayed on a flat surface; in this case the widely used WGS84 projection for the project. The WGS84 projection is set using the `get_proj4` function from the `tmaptools` package.
+Before calculating the distance, we'll set the starting location - Uluru - and the projection. A projection is the method by which a three-dimensional coordinate system is displayed on a flat surface; in this case the widely used WGS84 projection is used. The WGS84 projection is set using the `get_proj4` function from the `tmaptools` package.
 
-```{r vars, include = FALSE}
+```{r vars, echo = TRUE}
 location <- "Uluru"
 
 # We'll use the WGS84 projection for this project
@@ -57,7 +57,7 @@ latitude <- loc_df["y",]
 The call to the OSM has placed Uluru at; longitude: `r longitude` and latitude: `r latitude`. These coordinates can be converted to a geometry object using the `readWKT` function from the `rgeos` package. The `readWKT` function reads the Well Known Text (WKT), created by concatenating the latitude and longitude into the format _POINT(longitude latitude)_, and outputs a spatial object in the specified WGS84.
 
 ```{r locgeometry, echo = TRUE}
-# Get latitude and longitude of place of Uluru and create Well Known Text, and then geometry object
+# Get latitude and longitude of Uluru, create Well Known Text, and then geometry object
 loc_txt <- paste("POINT(",longitude," ",latitude,")")
 loc_wkt <- readWKT(loc_txt, p4s = CRS(wgs.84))
 ```
@@ -70,12 +70,12 @@ With the location of Uluru on the Earth's surface known how far above sea level 
 uluru_alt <- elevatr::get_elev_point(loc_wkt, src = "aws")
 ```
 
-The `get_elev_point` function accepts a point and returns the elevation. For Uluru the height above sea level is `r uluru_alt$elevation` metres.
+The `get_elev_point` function accepts a point and returns the elevation. Uluru is `r uluru_alt$elevation` metres above sea level.
 
 ### The coast {-#the-coast}
-As in the previous post coastline data can be obtained from the <http://www.naturalearthdata.com> website using the `readOGR` function from the `rgdal` package.
+As in the previous post coastline data can be obtained from the <http://www.naturalearthdata.com> website. The downloaded zip file is unzipped and read using the `readOGR` function from the `rgdal` package.
 
-```{r downloadfile, echo = TRUE, message = FALSE, warning = FALSE}
+```{r downloadfile, echo = TRUE, message = FALSE, warning = FALSE, include = FALSE}
 download.file("http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/physical/ne_10m_coastline.zip", 
               destfile = 'coastlines.zip')
 
@@ -106,21 +106,21 @@ xy <- cbind(x,y)
 sp_line <- SpatialLines(list(Lines(Line(xy), ID = "a")))
 ```
 
-## Kangaroo Hops {-#kangaroo-hops}
+## Kangaroo hops {-#kangaroo-hops}
 
-The `elevatr` package can calculate the elevation of a point. The line between Uluru and the coast is important as it can be broken up into many points. Using the `spsample` function from `sp` package the line between Uluru and the coast can be split into many points along the route. In the below code snippet 10,000 points along the line are taken. As the code sets the type to "regular" the points are evenly spaced. This means we have 10,000 points all ~`r round(dist_line[1]/10000, 2)` metres apart.
+The `elevatr` package can calculate the elevation of a point. The line between Uluru and the coast is important as it can be broken up into many points. Using the `spsample` function from the `sp` package the line between Uluru and the coast can be split into many points along the route. In the below code snippet 10,000 points along the line are taken. As the code sets the type to "regular" the points are evenly spaced. This means we have 10,000 points all ~`r round(dist_line[1]/10000, 2)` metres apart along the line between Uluru and the coast.
 
 ```{r calcpoints, echo = TRUE, message = FALSE, warning = FALSE}
 pts_2_sample <- 10000
 
-# Break the line into n regular intervals and create a dataframe of these, adding the location
+# Break the line into n regular intervals and create a dataframe of these, add location
 # of the point of interest along with the point on the coast
 spdf <- spsample(x = sp_line, n = pts_2_sample, type = "regular") 
 points <- as.data.frame(spdf)
 points <- as.data.frame(rbind(xy[1,], points, xy[2,]))
 ```
 
-The 10,000 points are stored in a data frame. This data frame can be passed to the `get_elev_points` function used previously to determine the elevation of each of the 10,000 points.
+The 10,000 points are stored in a data frame. This data frame can be passed to the `get_elev_points` function used previously to determine the elevation of each of the 10,000 points. The final step is to calculate the distance of each point from Uluru so as to be able to create an elevation profile.
 
 ```{r elevationcalc, echo = TRUE, message = FALSE, warning = FALSE}
 # Get distance between points
@@ -133,7 +133,7 @@ elevations_df <- as.data.frame(elevations)
 elevations_df <- cbind(elevations_df, "distance" = (as.numeric(row.names(elevations_df)) - 1) * dist_bw_pts)
 ```
 
-### Elevation Profile {-#elevation-profile}
+### Elevation profile {-#elevation-profile}
 
 With the points and elevations in a data frame an elevation profile can be produced to look at the changes that occur along the path from Uluru to the coast. Although the profile looks like there are significant peaks along the journey the initial rise of 300 metres in elevation occurs over almost 100 kilometres - hardly significant. The drop from almost 900 metres to the sea level occurs over 500 kilometres. 
 
@@ -147,9 +147,9 @@ ggplot(elevations_df) +
   theme_bw()
 ```
 
-### Distance Travelled {-#distance-travelled}
+### Distance travelled {-#distance-travelled}
 
-To calculate the distance travelled we call on Pythagoras' theorem. The Pythagorean equation is:
+To calculate the distance travelled over the terrain we call on Pythagoras' theorem. The Pythagorean equation is:
 
 
 $a^2 + b^2 = c^2$
@@ -157,7 +157,7 @@ $a^2 + b^2 = c^2$
 
 The horizontal distance travelled and the change in elevation are both known which means we can calculate the hypotenuse (or $c$). The sum of the hypotenuse values for each of the 10,000 points will provide a reasonably good estimate of the distance a kangaroo at Uluru would have to travel to reach the sea.
 
-``` {r pythagoras, echo=FALSE, out.width='100%', fig.cap = "\\label{fig:figs}Using the Pythagorean equation the distance travelled by a kangaroo can be calculated by determined by using the horizontal distance travelled and the change of elevation"}
+``` {r pythagoras, echo=FALSE, out.width='100%', fig.cap = "\\label{fig:figs}Using the Pythagorean equation the distance travelled by a kangaroo can be determined by using the horizontal distance travelled and the change of elevation"}
 knitr::include_graphics("./images/elevation_calc.png")
 ```
 
@@ -173,8 +173,8 @@ elevations_df <- cbind(elevations_df, "elevation_diff" = abs(elevations_df$eleva
 distance <- sum(sqrt(dist_bw_pts^2 + elevations_df$elevation_diff^2))
 ```
 
-The distance a kangaroo at Uluru would have to hop to reach the sea is `r round(distance/1000, 2)` kilometres. This is only `r round((distance) - dist_line[1], 2)` metres more than the crow would have to fly.
+The distance a kangaroo at Uluru would have to hop to reach the sea is `r round(distance/1000, 2)` kilometres. This is `r round((distance) - dist_line[1], 2)` metres more than the crow would have to fly.
 
 ## Conclusion {-#conclusion}
 
-The relatively flat interior of Australia is probably not the best example to use when calculating distance travelled over land rather than through the more commonly used as the crow flies calculation. None-the-less the method described here provides a template to calculate the distance travelled, accounting for undulations in the Earth's surface.
+The relatively flat interior of Australia is probably not the best example to use when calculating distance travelled over land rather than through the more commonly used _as the crow flies_ calculation. None-the-less the method described here provides a template to calculate the distance travelled, accounting for undulations in the Earth's surface.
