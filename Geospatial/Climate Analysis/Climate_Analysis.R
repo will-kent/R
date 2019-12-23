@@ -9,7 +9,11 @@ firstYear = 1950
 
 getYears <- function(station_id, type){
   
+  minYear = data.frame(min_year = 2000)
+  maxYear = data.frame(max_year = 2000)
+  
   tryCatch({gh <- get_historical(stationid = station_id, type = type)
+  
   minYear <- gh %>% 
     filter(min_temperature != "NA") %>% 
     group_by(station_number) %>% 
@@ -54,7 +58,7 @@ getHistoricalTemps <- function(station_id, start_year = 1950) {
     select(station_number, year, month, day, min_temperature, max_temperature) %>% 
     filter(min_temperature != "NA",
            max_temperature != "NA",
-           year >= 1950) %>% 
+           year >= firstYear) %>% 
     mutate(mean_daily = (min_temperature + max_temperature) / 2)
   
   return(avg_temp)
@@ -84,7 +88,7 @@ for(i in 1:nrow(lga)){
   stations <- getStation(firstYear, lga[i,]$lga_centroid)
   for(j in stations){
     years <- getYears(station_id = j, type = "min")
-    if(years$min_year <= firstYear && years$max_year >= as.integer(format(Sys.Date(), "%Y"))){
+    if((years$min_year <= firstYear) & (years$max_year >= as.integer(format(Sys.Date(), "%Y")))){
       station_id <- j
       message("Using station ", as.character(station_id), " for analysis")
       break
@@ -131,3 +135,9 @@ for(k in 1:nrow(station_lga)){
   }
   
 }
+
+b <- getYears(station_id = 066051, type = "min")
+a <- getYears(station_id = 069049, type = "min")
+
+gh <- get_historical(stationid = 069049, type = "min")
+
