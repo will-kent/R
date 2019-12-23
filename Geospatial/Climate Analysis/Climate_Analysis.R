@@ -5,6 +5,24 @@ library(tidyverse)
 
 #getwd()
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+firstYear = 1950
+
+getYears <- function(station_id, type){
+  
+  tryCatch({gh <- get_historical(stationid = station_id, type = type)
+  minYear <- gh %>% 
+    filter(min_temperature != "NA") %>% 
+    group_by(station_number) %>% 
+    summarise(min_year = min(year))
+  
+  maxYear <- gh %>% 
+    filter(min_temperature != "NA") %>% 
+    group_by(station_number) %>% 
+    summarise(max_year = max(year))},
+  error = function(e){})
+
+  return(c(minYear, maxYear))
+}
 
 # Find the closest station to a given point with data from the year in question
 getStation <- function(year = 1950, point){
@@ -15,22 +33,31 @@ getStation <- function(year = 1950, point){
   available_stations <- sweep_for_stations(latlon = c(latitude, longitude))
   station <- available_stations %>% 
     filter(start <= year) %>% 
-    top_n(n= 1, wt = desc(distance)) %>% 
     select(site)
-  
+    
   return(station$site)
 
 }
 
-getHistoricalAverage <- function(station_id) {
+getHistoricalTemps <- function(station_id, start_year = 1950) {
   
-  if(is.na(stationid)){
+  if(is.na(station_id)){
     message("No station id was made available")
     stop()
   }
   
-  data <- get_historical(stationid = station_id, type = c("min", "max"))
-  return(data)
+  min_temps <- get_historical(stationid = station_id, type = "min")
+  max_temps <- get_historical(stationid = station_id, type = "max")
+  
+  avg_temp <- min_temps %>% 
+    inner_join(max_temps, by = c("station_number", "year", "month", "day")) %>% 
+    select(station_number, year, month, day, min_temperature, max_temperature) %>% 
+    filter(min_temperature != "NA",
+           max_temperature != "NA",
+           year >= 1950) %>% 
+    mutate(mean_daily = (min_temperature + max_temperature) / 2)
+  
+  return(avg_temp)
 }
 
 # Get LGA shape file
@@ -54,11 +81,53 @@ station_lga <- data.frame(station_id = character(),
 
 # Loop through shape file to get closest weather station to the centroid with at least x years data
 for(i in 1:nrow(lga)){
-  station_id <- getStation(1950, lga[i,]$lga_centroid)
+  stations <- getStation(firstYear, lga[i,]$lga_centroid)
+  for(j in stations){
+    years <- getYears(station_id = j, type = "min")
+    if(years$min_year <= firstYear && years$max_year >= as.integer(format(Sys.Date(), "%Y"))){
+      station_id <- j
+      message("Using station ", as.character(station_id), " for analysis")
+      break
+    }
+  }
   lga_code <- as.character(lga[i,]$LGA_CODE19)
   df_row <- data.frame(cbind(station_id, lga_code))
   station_lga <- rbind(station_lga, df_row)
 }
 
-get_historical(stationid = 072023, type = c("min"))
-sweep_for_stations(latlon = c(-36.0266, 146.9704))
+# write file to disk so we don't need to do it again.
+write_csv(station_lga, "./Data Files/LGA_to_station.csv")
+
+# Create data frame to hold station id values for each lga
+station_means <- data.frame(station_id = character(),
+                          year = integer(),
+                          period_mean = numeric(),
+                          annual_mean = numeric())
+
+# Get the historical average for the weather station
+for(k in 1:nrow(station_lga)){
+  
+  station <- station_lga[k,]$station_id
+  if(!(station %in% station_means$station_id)){
+    temps <- getHistoricalTemps(station_id = station, firstYear)
+    
+    temp_baseline <- avg_temp %>% 
+      filter(between(year, firstYear, firstYear+50)) %>% 
+      summarise(period_mean = mean(mean_daily))
+    
+    mean_annual <- avg_temp %>% 
+      group_by(station_number, year) %>%
+      summarise(annual_mean = mean(mean_daily))
+    
+    df_means <- temp_baseline %>%
+      merge(mean_annual, all = TRUE) %>% 
+      select(station_id = station_number,
+             year,
+             period_mean,
+             annual_mean)
+    
+    station_means <- rbind(station_means, df_means)
+    
+  }
+  
+}
